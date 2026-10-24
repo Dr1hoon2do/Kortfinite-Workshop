@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kortfinite 카드 공방</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+/* Layout: 장부 형태. 왼쪽 목록, 오른쪽 편집기 (폰에서는 편집기가 화면을 덮는다). 비용 색은 게임 자원색 그대로 */
+:root{
+  --bg:#e9ecef; --surface:#fbfcfd; --sunk:#dfe3e8; --line:#c9cfd6;
+  --ink:#1b2129; --muted:#5d6773; --accent:#2e5d8a; --accent-ink:#ffffff;
+  --energy:#c98a12; --mana:#2f6fd0; --hp:#c63d3d; --gold:#a57a10;
+  --v-red:#c63d3d; --v-blue:#2f6fd0; --v-yellow:#c3a114; --v-green:#2f8f57; --v-purple:#7a4fc0; --v-default:#5d6773;
+  --t-slate:#5d6773; --t-red:#c63d3d; --t-amber:#c98a12; --t-green:#2f8f57; --t-teal:#13817a; --t-blue:#2f6fd0; --t-violet:#7a4fc0; --t-pink:#c2457f;
+  --warn:#b4401b;
+  --f-body:"IBM Plex Sans KR",system-ui,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14181d; --surface:#1c2128; --sunk:#252b33; --line:#343c46;
+  --ink:#e4e8ec; --muted:#97a1ac; --accent:#7fb0e0; --accent-ink:#0f1720;
+  --energy:#e8ad3a; --mana:#6aa1f0; --hp:#ec6b6b; --gold:#d8b14a;
+  --v-red:#ec6b6b; --v-blue:#6aa1f0; --v-yellow:#e2c54a; --v-green:#5cc48a; --v-purple:#a989e6; --v-default:#97a1ac;
+  --t-slate:#97a1ac; --t-red:#ec6b6b; --t-amber:#e8ad3a; --t-green:#5cc48a; --t-teal:#4cc2b8; --t-blue:#6aa1f0; --t-violet:#a989e6; --t-pink:#e87bb0;
+  --warn:#f08a5d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14181d; --surface:#1c2128; --sunk:#252b33; --line:#343c46;
+  --ink:#e4e8ec; --muted:#97a1ac; --accent:#7fb0e0; --accent-ink:#0f1720;
+  --energy:#e8ad3a; --mana:#6aa1f0; --hp:#ec6b6b; --gold:#d8b14a;
+  --v-red:#ec6b6b; --v-blue:#6aa1f0; --v-yellow:#e2c54a; --v-green:#5cc48a; --v-purple:#a989e6; --v-default:#97a1ac;
+  --t-slate:#97a1ac; --t-red:#ec6b6b; --t-amber:#e8ad3a; --t-green:#5cc48a; --t-teal:#4cc2b8; --t-blue:#6aa1f0; --t-violet:#a989e6; --t-pink:#e87bb0;
+  --warn:#f08a5d; color-scheme:dark}
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;display:flex;flex-direction:column}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-size:.82em}
+
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 0}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.top h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.01em}
+.top h1 small{font-weight:500;color:var(--muted);font-size:12px;margin-left:6px}
+#status{font-size:12px;color:var(--muted);margin-right:auto}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:6px 11px;font-size:13px;font-weight:500}
+.btn:hover{background:var(--sunk)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--hp)}
+.btn.armed{background:var(--hp);border-color:var(--hp);color:#fff}
+.tabs{display:flex;gap:2px;margin-top:8px;overflow-x:auto}
+.tab{border:0;background:none;padding:8px 12px 9px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .n{font-family:var(--f-mono);font-size:11px;margin-left:4px;color:var(--muted)}
+
+main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){main{grid-template-columns:minmax(300px,380px) minmax(0,1fr)}}
+.pane{overflow-y:auto;min-width:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 40px}
+#list{border-right:1px solid var(--line)}
+#editor{background:var(--surface)}
+@media (max-width:899px){
+  #editor{position:fixed;inset:0;z-index:20;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+  #editor[hidden]{display:none!important}
+}
+@media (min-width:900px){#editor[hidden]{display:block!important}}
+
+.listbar{display:flex;gap:8px;margin-bottom:10px}
+.listbar input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 10px}
+.filters{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.rows{display:flex;flex-direction:column;gap:6px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 11px}
+.row:hover{border-color:var(--accent)}
+.row.sel{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.row .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .id{color:var(--muted)}
+.row .meta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);font-size:14px;padding:24px 4px;line-height:1.6}
+
+.pip{display:inline-flex;align-items:center;gap:3px;font-family:var(--f-mono);font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px;color:#fff}
+.pip.energy{background:var(--energy)}.pip.mana{background:var(--mana)}.pip.hp{background:var(--hp)}.pip.gold{background:var(--gold)}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:1px 8px;border-radius:999px;border:1px solid currentColor;background:none;line-height:1.6}
+.chip button{border:0;background:none;padding:0 0 0 2px;font-size:13px;line-height:1;color:inherit;opacity:.7}
+.chip.off{opacity:.45}
+.chip.missing{color:var(--warn);border-style:dashed}
+.chip.link{cursor:pointer}
+
+.ed-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.ed-head h2{margin:0;font-size:20px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.back{display:inline-flex}
+@media (min-width:900px){.back{display:none}}
+.ed-empty{color:var(--muted);padding:40px 0;max-width:46ch;line-height:1.7}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px 14px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f.wide{grid-column:1/-1}
+.f>label,.lab{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted)}
+.f input,.f select,.f textarea,.inp{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:7px 9px;min-width:0;width:100%}
+.f textarea{min-height:64px;resize:vertical}
+.f input.bad{border-color:var(--warn)}
+.hint{font-size:12px;color:var(--muted)}
+.hint.warn{color:var(--warn)}
+.costs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.cost{display:flex;flex-direction:column;gap:2px}
+.cost span{font-size:11px;font-weight:600}
+.cost.energy span{color:var(--energy)}.cost.mana span{color:var(--mana)}.cost.hp span{color:var(--hp)}.cost.gold span{color:var(--gold)}
+.cost input{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:6px 8px;font-family:var(--f-mono);width:100%;min-width:0}
+.refs{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.adder{display:flex;gap:6px;margin-top:6px}
+.adder input{flex:1;min-width:0;border:1px dashed var(--line);background:none;border-radius:6px;padding:5px 9px;font-size:13px}
+
+section.blk{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}
+section.blk>h3{margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:.04em;display:flex;align-items:center;gap:8px}
+section.blk>h3 .sp{flex:1}
+
+.tree{overflow-x:auto;padding:4px 0 8px}
+.tree ul{list-style:none;margin:0;padding-left:22px;position:relative}
+.tree>ul{padding-left:0}
+.tree li{position:relative;padding:4px 0}
+.tree ul ul li::before{content:"";position:absolute;left:-14px;top:0;bottom:50%;width:12px;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line);border-bottom-left-radius:6px}
+.tree ul ul li:not(:last-child)::after{content:"";position:absolute;left:-14px;top:50%;bottom:0;border-left:1.5px solid var(--line)}
+.node{display:inline-flex;flex-direction:column;gap:1px;border:1.5px solid var(--vc);border-radius:7px;padding:4px 10px;background:var(--surface);white-space:nowrap;text-align:left}
+.node b{font-size:13px;color:var(--vc)}
+.node small{font-size:11px;color:var(--muted)}
+
+.up{border:1px solid var(--line);border-left:4px solid var(--vc);border-radius:8px;margin-top:10px;background:var(--bg)}
+.up>summary{list-style:none;cursor:pointer;padding:9px 12px;display:flex;align-items:center;gap:8px;font-weight:600}
+.up>summary::-webkit-details-marker{display:none}
+.up>summary .k{font-family:var(--f-mono);font-size:11px;color:var(--vc)}
+.up>summary .sp{flex:1}
+.up .body{padding:4px 12px 14px}
+.up .f input,.up .f select,.up .f textarea,.up .cost input{background:var(--surface)}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) 64px 28px;gap:6px;align-items:center;margin-top:5px}
+.mrow.drop{grid-template-columns:minmax(0,1fr) 56px 64px 28px}
+.mrow .mn{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow .mn.missing{color:var(--warn)}
+.mrow input{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 7px;font-family:var(--f-mono);width:100%;min-width:0}
+.x{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:4px}
+.uses{display:flex;flex-direction:column;gap:5px}
+.use{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);text-align:left;width:100%}
+.use .sp{flex:1;min-width:0}
+.use .c{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.sw{width:26px;height:26px;border-radius:50%;border:2px solid transparent;background:var(--c)}
+.sw[aria-pressed="true"]{border-color:var(--ink)}
+
+.sheet{position:fixed;inset:0;z-index:40;background:rgba(10,14,20,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet .card{background:var(--surface);border-radius:12px 12px 0 0;width:min(560px,100%);padding:18px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:10px;max-height:90%;overflow:auto}
+@media (min-width:600px){.sheet{align-items:center}.sheet .card{border-radius:12px}}
+.sheet h3{margin:0;font-size:16px}
+.sheet p{margin:0;color:var(--muted);font-size:13px;line-height:1.6}
+.sheet .acts{display:flex;flex-wrap:wrap;gap:8px}
+.sheet textarea{width:100%;min-height:140px;font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:8px}
+@media (prefers-reduced-motion:no-preference){.row,.btn,.chip{transition:background-color .12s,border-color .12s}}
+.who{font-size:12px;color:var(--muted);max-width:14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gate{max-width:44ch;display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:28px 4px;color:var(--muted);line-height:1.7}
+.gate code{font-family:var(--f-mono);font-size:12px;background:var(--sunk);padding:1px 5px;border-radius:4px;color:var(--ink);word-break:break-all}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="top">
+    <h1>카드 공방<small>Kortfinite</small></h1>
+    <span id="status">불러오는 중…</span>
+    <span class="who" id="who"></span>
+    <button class="btn" id="btnAuth" type="button">로그인</button>
+    <button class="btn" id="btnImport" type="button">가져오기</button>
+    <button class="btn primary" id="btnExport" type="button">내보내기</button>
+    <input type="file" id="fileIn" accept=".zip,.json,application/zip,application/json" hidden>
+  </div>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+</header>
+<main>
+  <div class="pane" id="list"></div>
+  <div class="pane" id="editor" hidden></div>
+</main>
+<div id="sheetHost"></div>
+
+<script>
+"use strict";
+const COLS = {cards:"카드", materials:"재료", enemies:"적", tags:"태그"};
+const PREFIX = {cards:"card", materials:"mat", enemies:"enemy", tags:"tag"};
+const COST = [["energy","기력"],["mana","마나"],["hp","체력"],["gold","골드"]];
+const KINDS = [["basic","기본"],["reward","보상"],["special","특수"]];
+const VARIANTS = [["red","빨강"],["blue","파랑"],["yellow","노랑"],["green","초록"],["purple","보라"]];
+const TAGCOLORS = ["slate","red","amber","green","teal","blue","violet","pink"];
+const ID_RE = /^[a-z0-9_]+$/;
+
+const S = {cards:{}, materials:{}, enemies:{}, tags:{}};
+let tab = "cards", sel = null, q = "", tagFilter = null, draft = null;
+let mode = "wait";
+
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clone = o => JSON.parse(JSON.stringify(o ?? {}));
+const sortIds = c => Object.keys(S[c]).sort((a,b) => (S[c][a].name||a).localeCompare(S[c][b].name||b, "ko"));
+function setStatus(t){ $("#status").textContent = t; }
+
+/* ---------- 저장 (Firebase Realtime Database) ---------- */
+const FB_CONFIG = {
+  apiKey: "AIzaSyB5S27pJjTTtSzXUsCLNbBQPcb_P1m7Eso",
+  authDomain: "kortfinite-drhoondo.firebaseapp.com",
+  databaseURL: "https://kortfinite-drhoondo-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "kortfinite-drhoondo",
+  storageBucket: "kortfinite-drhoondo.firebasestorage.app",
+  messagingSenderId: "877620571174",
+  appId: "1:877620571174:web:e4c5de11366c19012dcae7"
+};
+const ROOT = "workshop";
+let user = null, rdb = null, auth = null, listeners = [], loaded = {};
+const pending = new Map(); let qtimer = null;
+const arr = v => Array.isArray(v) ? v.filter(x => x != null) : (v && typeof v === "object" ? Object.values(v) : []);
+function norm(c, d){
+  d = clone(d);
+  if(c === "cards"){ d.cost = d.cost || {}; d.tags = arr(d.tags); d.upgrades = arr(d.upgrades).map(u => ({...u, cost:u.cost||{}, tags:arr(u.tags), materials:arr(u.materials)})); }
+  if(c === "enemies"){ d.tags = arr(d.tags); d.drops = arr(d.drops); }
+  return d;
+}
+function put(c, id, data){
+  if(data === null) delete S[c][id]; else S[c][id] = data;
+  if(!user){ setStatus("로그인해야 저장돼"); return; }
+  pending.set(c+"/"+id, {c, id, data}); clearTimeout(qtimer); qtimer = setTimeout(flush, 400); setStatus("저장 대기…");
+}
+async function flush(){
+  if(!pending.size) return;
+  const upd = {};
+  for(const [k, p] of pending) upd[k] = p.data === null ? null : clone(p.data);
+  pending.clear(); setStatus("저장 중…");
+  try{ await rdb.ref(ROOT).update(upd); if(!pending.size) setStatus("저장됨"); }
+  catch(e){ setStatus("저장 실패: " + (e.code || e.message)); if(/permission/i.test(e.code || e.message)) showPerm(); }
+}
+function subscribe(){
+  unsubscribe();
+  for(const c in COLS){
+    const ref = rdb.ref(ROOT + "/" + c);
+    const fn = ref.on("value", snap => {
+      const v = snap.val() || {}, next = {};
+      for(const id in v) next[id] = pending.has(c+"/"+id) && S[c][id] ? S[c][id] : norm(c, v[id]);
+      for(const [k, p] of pending){ if(p.c !== c) continue; if(p.data === null) delete next[p.id]; else next[p.id] = S[c][p.id]; }
+      S[c] = next; loaded[c] = true;
+      if(mode !== "db" && Object.keys(COLS).every(k => loaded[k])){ mode = "db"; setStatus("연결됨"); }
+      renderTabs(); renderList();
+      if(sel && sel.c === c && !S[c][sel.id]) closeEditor();
+    }, err => { setStatus("읽기 거부됨"); mode = "denied"; renderList(); });
+    listeners.push(() => ref.off("value", fn));
+  }
+}
+function unsubscribe(){ listeners.forEach(f => f()); listeners = []; loaded = {}; }
+function showPerm(){
+  sheet(`<h3>저장 권한이 없어</h3>
+    <p>Firebase 콘솔 → Realtime Database → 규칙에서 이 계정을 허용해야 해. 지금 로그인한 계정은 <span class="mono">${esc(user && user.email)}</span>야.</p>
+    <div class="acts"><button class="btn" type="button" data-sheet-close>닫기</button></div>`);
+}
+
+/* ---------- 조회 ---------- */
+const nm = (c, id) => S[c][id] ? (S[c][id].name || id) : null;
+function tagChip(tid, removable, path){
+  const t = S.tags[tid];
+  if(!t) return `<span class="chip missing" title="없는 태그">${esc(tid)}${removable?`<button data-act="rmref" data-path="${path}" data-v="${esc(tid)}" aria-label="빼기">×</button>`:""}</span>`;
+  return `<span class="chip" style="color:var(--t-${t.color||"slate"})">${esc(t.name||tid)}${removable?`<button data-act="rmref" data-path="${path}" data-v="${esc(tid)}" aria-label="빼기">×</button>`:""}</span>`;
+}
+function pips(cost){ return COST.filter(([k]) => cost && cost[k]).map(([k,l]) => `<span class="pip ${k}">${l} ${cost[k]}</span>`).join(""); }
+function vcolor(key){ return VARIANTS.some(v => v[0] === key) ? `var(--v-${key})` : "var(--accent)"; }
+function matUses(mid){
+  const out = [];
+  for(const cid of sortIds("cards")) for(const u of S.cards[cid].upgrades || []) for(const m of u.materials || []) if(m.id === mid) out.push({cid, u, count:m.count});
+  return out;
+}
+function matDrops(mid){
+  const out = [];
+  for(const eid of sortIds("enemies")) for(const d of S.enemies[eid].drops || []) if(d.id === mid) out.push({eid, d});
+  return out;
+}
+function tagUses(tid){
+  const out = [];
+  for(const cid of sortIds("cards")){ const c = S.cards[cid]; if((c.tags||[]).includes(tid)) out.push({c:"cards", id:cid, label:c.name||cid});
+    for(const u of c.upgrades || []) if((u.tags||[]).includes(tid)) out.push({c:"cards", id:cid, label:(u.name||u.key) + " (" + (c.name||cid) + " 강화)"}); }
+  for(const eid of sortIds("enemies")) if((S.enemies[eid].tags||[]).includes(tid)) out.push({c:"enemies", id:eid, label:S.enemies[eid].name||eid});
+  return out;
+}
+function newId(c){ let n = 1; while(S[c][PREFIX[c]+"_"+n]) n++; return PREFIX[c]+"_"+n; }
+
+/* ---------- 목록 ---------- */
+function renderTabs(){
+  $("#tabs").innerHTML = Object.entries(COLS).map(([c,l]) =>
+    `<button class="tab" role="tab" aria-selected="${c===tab}" data-act="tab" data-c="${c}">${l}<span class="n">${Object.keys(S[c]).length}</span></button>`).join("");
+}
+function matches(c, id){
+  const d = S[c][id];
+  if(tagFilter && !(d.tags||[]).includes(tagFilter) && !(d.upgrades||[]).some(u => (u.tags||[]).includes(tagFilter))) return false;
+  if(!q) return true;
+  const hay = (id + " " + JSON.stringify(d)).toLowerCase();
+  return q.toLowerCase().split(/\s+/).every(w => hay.includes(w));
+}
+function rowMeta(c, id){
+  const d = S[c][id];
+  if(c === "cards"){
+    const ups = d.upgrades || [];
+    return `${pips(d.cost)}${(d.tags||[]).map(t => tagChip(t)).join("")}${ups.length ? `<span>강화 ${ups.map(u => `<b style="color:${vcolor(u.key)}">●</b>`).join("")}</span>` : ""}`;
+  }
+  if(c === "materials"){ const u = matUses(id).length, dr = matDrops(id).length; return `<span>카드 ${u}곳</span><span>· 드랍 ${dr}종</span>${d.source?`<span>· ${esc(d.source)}</span>`:""}`; }
+  if(c === "enemies") return `<span class="mono">HP ${d.hp ?? "-"} · ATK ${d.atk ?? "-"}</span>${d.floors?`<span>· ${esc(d.floors)}층</span>`:""}${(d.tags||[]).map(t => tagChip(t)).join("")}`;
+  if(c === "tags") return `<span class="chip" style="color:var(--t-${d.color||"slate"})">${esc(d.name||id)}</span><span>${tagUses(id).length}곳</span>`;
+}
+function renderList(){
+  const el = $("#list");
+  if(mode === "wait"){ el.innerHTML = `<p class="empty">연결하는 중…</p>`; return; }
+  if(mode === "signedout"){ el.innerHTML = `<div class="gate"><b style="color:var(--ink)">구글 계정으로 로그인해야 써.</b><span>데이터는 Firebase에 저장되고, 폰이든 PC든 같은 계정으로 들어오면 같은 내용이 보여.</span><button class="btn primary" type="button" id="gateLogin">구글로 로그인</button></div>`; $("#gateLogin").onclick = login; return; }
+  if(mode === "denied"){ el.innerHTML = `<div class="gate"><b style="color:var(--ink)">이 계정은 아직 허용 안 됐어.</b><span>Firebase 콘솔 → Realtime Database → 규칙에 이 메일을 넣어:</span><code>${esc(user && user.email)}</code><button class="btn" type="button" id="gateOut">다른 계정으로</button></div>`; $("#gateOut").onclick = () => auth.signOut(); return; }
+  const ids = sortIds(tab).filter(id => matches(tab, id));
+  const hasTags = (tab === "cards" || tab === "enemies") && Object.keys(S.tags).length;
+  const focused = document.activeElement && document.activeElement.id === "search";
+  el.innerHTML = `
+    <div class="listbar">
+      <input id="search" type="search" placeholder="${COLS[tab]} 검색 (이름·id·효과)" value="${esc(q)}" autocomplete="off">
+      <button class="btn primary" type="button" data-act="new">+ 새 ${COLS[tab]}</button>
+    </div>
+    ${hasTags ? `<div class="filters">${sortIds("tags").map(t => `<button type="button" class="chip link ${tagFilter && tagFilter!==t ? "off" : ""}" style="color:var(--t-${S.tags[t].color||"slate"})" data-act="tagf" data-v="${esc(t)}">${esc(S.tags[t].name||t)}</button>`).join("")}</div>` : ""}
+    <div class="rows">${ids.length ? ids.map(id => `
+      <button type="button" class="row ${sel && sel.c===tab && sel.id===id ? "sel" : ""}" data-act="open" data-id="${esc(id)}">
+        <span class="nm">${esc(S[tab][id].name || id)}</span><span class="id mono">${esc(id)}</span>
+        <span class="meta">${rowMeta(tab, id)}</span>
+      </button>`).join("") : `<p class="empty">${Object.keys(S[tab]).length ? "검색에 맞는 항목이 없어." : emptyText(tab)}</p>`}</div>`;
+  if(focused){ const s = $("#search"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+}
+function emptyText(c){
+  return {cards:"아직 카드가 없어. ‘+ 새 카드’로 만들거나, 가져오기로 zip·json을 불러와.",
+    materials:"재료가 없어. 여기서 만들어두면 카드 강화와 적 드랍에서 골라 쓸 수 있어. 카드 편집기에서 이름을 바로 쳐도 새로 만들어져.",
+    enemies:"적이 없어. 적을 만들고 드랍 재료를 붙이면, 재료 쪽에 어디서 나오는지 자동으로 보여.",
+    tags:"태그가 없어. 카드나 적 편집기의 태그 칸에 이름을 치면 바로 생겨."}[c];
+}
+
+/* ---------- 편집기 ---------- */
+function openEditor(c, id){
+  sel = {c, id}; draft = clone(S[c][id]);
+  $("#editor").hidden = false; renderEditor(true); renderList();
+}
+function closeEditor(){ sel = null; draft = null; $("#editor").hidden = true; renderEditor(); renderList(); }
+function commit(){ put(sel.c, sel.id, clone(draft)); }
+
+function costRow(path, cost){
+  return `<div class="costs">${COST.map(([k,l]) => `<label class="cost ${k}"><span>${l}</span><input type="number" inputmode="numeric" min="0" id="${path}-${k}" data-f="${path}.${k}" data-num value="${cost && cost[k] ? cost[k] : ""}" placeholder="0"></label>`).join("")}</div>`;
+}
+function tagField(path, tags){
+  return `<div class="f wide"><span class="lab">태그</span>
+    <div class="refs">${(tags||[]).map(t => tagChip(t, true, path)).join("") || `<span class="hint">없음</span>`}</div>
+    <div class="adder"><input list="dl-tags" placeholder="태그 이름 치고 엔터 (없으면 새로 생김)" data-add="tags" data-path="${path}" id="add-${path}"></div></div>`;
+}
+function matRows(path, list){
+  return `${(list||[]).map((m,i) => `<div class="mrow">
+      <span class="mn ${S.materials[m.id]?"":"missing"}">${esc(nm("materials", m.id) || (m.id + " (없음)"))}</span>
+      <input type="number" inputmode="numeric" min="1" aria-label="수량" id="${path}-${i}-n" data-f="${path}.${i}.count" data-num value="${m.count ?? 1}">
+      <button type="button" class="x" data-act="rmrow" data-path="${path}" data-i="${i}" aria-label="빼기">×</button></div>`).join("")}
+    <div class="adder"><input list="dl-materials" placeholder="재료 이름 치고 엔터" data-add="materials" data-path="${path}" id="add-${path}"></div>`;
+}
+function datalists(){
+  return ["tags","materials"].map(c => `<datalist id="dl-${c}">${sortIds(c).map(id => `<option value="${esc(S[c][id].name||id)}">`).join("")}</datalist>`).join("");
+}
+function head(){
+  return `<div class="ed-head">
+    <button type="button" class="btn back" data-act="close">← 목록</button>
+    <h2>${esc(draft.name || sel.id)}</h2>
+    <button type="button" class="btn danger" data-act="delete">삭제</button></div>`;
+}
+function idField(){
+  return `<div class="f"><label for="ed-id">id (파일·코드 이름)</label><input id="ed-id" class="mono" value="${esc(sel.id)}" data-act="rename" autocomplete="off" autocapitalize="off" spellcheck="false"><span class="hint" id="id-hint">영소문자·숫자·_ 만</span></div>`;
+}
+function renderEditor(resetScroll){
+  const el = $("#editor");
+  if(!sel){ el.innerHTML = `<p class="ed-empty">왼쪽에서 항목을 고르면 여기서 편집해. 바꾼 내용은 바로 저장돼.</p>`; return; }
+  const top = el.scrollTop;
+  const c = sel.c, d = draft;
+  let h = head() + datalists();
+  if(c === "cards") h += cardEditor(d);
+  if(c === "materials") h += materialEditor(d);
+  if(c === "enemies") h += enemyEditor(d);
+  if(c === "tags") h += tagEditor(d);
+  el.innerHTML = h;
+  el.scrollTop = resetScroll ? 0 : top;
+}
+function cardEditor(d){
+  const ups = d.upgrades || [];
+  const keysTaken = ups.map(u => u.key);
+  return `<div class="grid">
+      <div class="f"><label for="ed-name">이름</label><input id="ed-name" data-f="name" value="${esc(d.name)}"></div>
+      ${idField()}
+      <div class="f"><label for="ed-kind">분류</label><select id="ed-kind" data-f="kind">${KINDS.map(([k,l]) => `<option value="${k}" ${d.kind===k?"selected":""}>${l}</option>`).join("")}</select></div>
+      <div class="f wide"><span class="lab">비용</span>${costRow("cost", d.cost)}</div>
+      <div class="f wide"><label for="ed-fx">효과</label><textarea id="ed-fx" data-f="effect">${esc(d.effect)}</textarea></div>
+      ${tagField("tags", d.tags)}
+      <div class="f wide"><label for="ed-note">비고</label><textarea id="ed-note" data-f="note">${esc(d.note)}</textarea></div>
+    </div>
+    <section class="blk"><h3>강화 트리<span class="sp"></span>
+      <button type="button" class="btn" data-act="addup">+ 강화 추가</button></h3>
+      ${ups.length ? `<div class="tree"><ul>${treeNode("default", d)}</ul></div>` : `<p class="hint">강화가 없으면 내보낼 때 default.json만 나가.</p>`}
+      ${ups.map((u,i) => upgradeBlock(u, i, d, keysTaken)).join("")}
+    </section>`;
+}
+function treeNode(key, d){
+  const isBase = key === "default";
+  const u = isBase ? null : (d.upgrades||[]).find(x => x.key === key);
+  const kids = (d.upgrades||[]).filter(x => (x.from || "default") === key && x.key !== key);
+  const mats = u ? (u.materials||[]).map(m => (nm("materials", m.id) || m.id) + "×" + (m.count ?? 1)).join(", ") : "";
+  return `<li><button type="button" class="node" style="--vc:${isBase ? "var(--v-default)" : vcolor(key)}" ${u ? `data-act="jump" data-k="${esc(key)}"` : ""}>
+      <b>${esc(isBase ? (d.name || sel.id) : (u.name || key))}</b><small class="mono">${esc(key)}${mats ? " · " + esc(mats) : ""}</small></button>
+    ${kids.length ? `<ul>${kids.map(k => treeNode(k.key, d)).join("")}</ul>` : ""}</li>`;
+}
+function upgradeBlock(u, i, d, keysTaken){
+  const p = "upgrades." + i;
+  const keyOpts = VARIANTS.filter(([k]) => k === u.key || !keysTaken.includes(k));
+  const custom = !VARIANTS.some(([k]) => k === u.key);
+  const froms = ["default", ...(d.upgrades||[]).map(x => x.key).filter(k => k !== u.key)];
+  return `<details class="up" id="up-${esc(u.key)}" style="--vc:${vcolor(u.key)}" open>
+    <summary><span>${esc(u.name || u.key)}</span><span class="k">${esc(u.key)}.json</span><span class="sp"></span>${pips(u.cost)}</summary>
+    <div class="body"><div class="grid">
+      <div class="f"><label for="${p}-name">이름</label><input id="${p}-name" data-f="${p}.name" value="${esc(u.name)}"></div>
+      <div class="f"><label for="${p}-key">파일 이름</label><select id="${p}-key" data-act="rekey" data-i="${i}">
+        ${keyOpts.map(([k,l]) => `<option value="${k}" ${u.key===k?"selected":""}>${k} (${l})</option>`).join("")}
+        ${custom ? `<option value="${esc(u.key)}" selected>${esc(u.key)}</option>` : ""}</select></div>
+      <div class="f"><label for="${p}-from">강화 전</label><select id="${p}-from" data-f="${p}.from">
+        ${froms.map(k => `<option value="${esc(k)}" ${(u.from||"default")===k?"selected":""}>${k==="default" ? "기본 ("+esc(d.name||sel.id)+")" : esc(((d.upgrades||[]).find(x=>x.key===k)||{}).name || k)}</option>`).join("")}</select></div>
+      <div class="f wide"><span class="lab">비용</span>${costRow(p+".cost", u.cost)}</div>
+      <div class="f wide"><label for="${p}-fx">효과</label><textarea id="${p}-fx" data-f="${p}.effect">${esc(u.effect)}</textarea></div>
+      <div class="f wide"><span class="lab">재료 · 수량</span>${matRows(p+".materials", u.materials)}</div>
+      ${tagField(p+".tags", u.tags)}
+      <div class="f wide"><label for="${p}-note">비고</label><textarea id="${p}-note" data-f="${p}.note">${esc(u.note)}</textarea></div>
+    </div>
+    <div class="adder" style="justify-content:space-between">
+      <button type="button" class="btn" data-act="copyup" data-i="${i}">기본 비용·효과 복사</button>
+      <button type="button" class="btn danger" data-act="rmup" data-i="${i}">이 강화 삭제</button></div>
+    </div></details>`;
+}
+function materialEditor(d){
+  const uses = matUses(sel.id), drops = matDrops(sel.id);
+  const total = uses.reduce((s,x) => s + (+x.count || 0), 0);
+  return `<div class="grid">
+      <div class="f"><label for="ed-name">이름</label><input id="ed-name" data-f="name" value="${esc(d.name)}"></div>
+      ${idField()}
+      <div class="f wide"><label for="ed-src">얻는 곳 (메모)</label><input id="ed-src" data-f="source" value="${esc(d.source)}" placeholder="상점, 이벤트, 보스 보상…"></div>
+      <div class="f wide"><label for="ed-note">비고</label><textarea id="ed-note" data-f="note">${esc(d.note)}</textarea></div>
+    </div>
+    <section class="blk"><h3>쓰이는 카드<span class="sp"></span><span class="hint mono">총 ${total}개</span></h3>
+      <div class="uses">${uses.map(x => `<button type="button" class="use" data-act="goto" data-c="cards" data-id="${esc(x.cid)}">
+        <span style="color:${vcolor(x.u.key)}">●</span><span class="sp">${esc(x.u.name || x.u.key)} <span class="hint">← ${esc(S.cards[x.cid].name || x.cid)}</span></span><span class="c">×${x.count ?? 1}</span></button>`).join("") || `<p class="hint">아직 아무 강화에도 안 쓰여.</p>`}</div></section>
+    <section class="blk"><h3>떨어뜨리는 적</h3>
+      <div class="uses">${drops.map(x => `<button type="button" class="use" data-act="goto" data-c="enemies" data-id="${esc(x.eid)}">
+        <span class="sp">${esc(S.enemies[x.eid].name || x.eid)}</span><span class="c">×${x.d.count ?? 1}${x.d.chance != null && x.d.chance !== "" ? " · " + x.d.chance + "%" : ""}</span></button>`).join("") || `<p class="hint">떨어뜨리는 적이 없어. 적 편집기에서 드랍으로 붙여.</p>`}</div></section>`;
+}
+function enemyEditor(d){
+  const p = "drops";
+  return `<div class="grid">
+      <div class="f"><label for="ed-name">이름</label><input id="ed-name" data-f="name" value="${esc(d.name)}"></div>
+      ${idField()}
+      <div class="f"><label for="ed-floors">출현 층</label><input id="ed-floors" data-f="floors" value="${esc(d.floors)}" placeholder="1-5"></div>
+      <div class="f"><label for="ed-hp">체력</label><input id="ed-hp" type="number" inputmode="numeric" data-f="hp" data-num value="${d.hp ?? ""}"></div>
+      <div class="f"><label for="ed-atk">공격력</label><input id="ed-atk" type="number" inputmode="numeric" data-f="atk" data-num value="${d.atk ?? ""}"></div>
+      <div class="f"><label for="ed-def">방어력</label><input id="ed-def" type="number" inputmode="numeric" data-f="def" data-num value="${d.def ?? ""}"></div>
+      <div class="f"><label for="ed-spd">이동속도</label><input id="ed-spd" type="number" inputmode="numeric" data-f="speed" data-num value="${d.speed ?? ""}"></div>
+      ${tagField("tags", d.tags)}
+      <div class="f wide"><label for="ed-pat">행동 패턴</label><textarea id="ed-pat" data-f="pattern" placeholder="예) 2턴마다 강타, 체력 50% 이하면 분노">${esc(d.pattern)}</textarea></div>
+      <div class="f wide"><label for="ed-note">비고</label><textarea id="ed-note" data-f="note">${esc(d.note)}</textarea></div>
+    </div>
+    <section class="blk"><h3>드랍 재료</h3>
+      ${(d.drops||[]).length ? `<div class="mrow drop hint"><span>재료</span><span>수량</span><span>확률%</span><span></span></div>` : ""}
+      ${(d.drops||[]).map((m,i) => `<div class="mrow drop">
+        <span class="mn ${S.materials[m.id]?"":"missing"}">${esc(nm("materials", m.id) || (m.id + " (없음)"))}</span>
+        <input type="number" inputmode="numeric" min="1" aria-label="수량" id="${p}-${i}-n" data-f="${p}.${i}.count" data-num value="${m.count ?? 1}">
+        <input type="number" inputmode="numeric" min="0" max="100" aria-label="확률" id="${p}-${i}-c" data-f="${p}.${i}.chance" data-num value="${m.chance ?? ""}" placeholder="100">
+        <button type="button" class="x" data-act="rmrow" data-path="${p}" data-i="${i}" aria-label="빼기">×</button></div>`).join("")}
+      <div class="adder"><input list="dl-materials" placeholder="재료 이름 치고 엔터" data-add="materials" data-path="${p}" id="add-${p}"></div>
+    </section>`;
+}
+function tagEditor(d){
+  const uses = tagUses(sel.id);
+  return `<div class="grid">
+      <div class="f"><label for="ed-name">이름</label><input id="ed-name" data-f="name" value="${esc(d.name)}"></div>
+      ${idField()}
+      <div class="f wide"><span class="lab">색</span><div class="swatches">${TAGCOLORS.map(k => `<button type="button" class="sw" style="--c:var(--t-${k})" aria-label="${k}" aria-pressed="${(d.color||"slate")===k}" data-act="color" data-v="${k}"></button>`).join("")}</div></div>
+      <div class="f wide"><label for="ed-note">설명</label><textarea id="ed-note" data-f="note" placeholder="이 태그가 붙은 카드가 받는 효과, 시너지 메모">${esc(d.note)}</textarea></div>
+    </div>
+    <section class="blk"><h3>붙어 있는 곳<span class="sp"></span><span class="hint mono">${uses.length}</span></h3>
+      <div class="uses">${uses.map(x => `<button type="button" class="use" data-act="goto" data-c="${x.c}" data-id="${esc(x.id)}"><span class="hint">${COLS[x.c]}</span><span class="sp">${esc(x.label)}</span></button>`).join("") || `<p class="hint">아직 안 붙어 있어.</p>`}</div></section>`;
+}
+
+/* ---------- 경로 편집 ---------- */
+function getPath(o, path){ return path.split(".").reduce((a,k) => a == null ? a : a[k], o); }
+function setPath(o, path, v){
+  const ks = path.split("."); let a = o;
+  for(let i=0;i<ks.length-1;i++){ const k = ks[i]; if(a[k] == null) a[k] = /^\d+$/.test(ks[i+1]) ? [] : {}; a = a[k]; }
+  const last = ks[ks.length-1];
+  if(v === undefined) delete a[last]; else a[last] = v;
+}
+function findOrCreate(c, text){
+  const t = text.trim(); if(!t) return null;
+  const hit = Object.keys(S[c]).find(id => id === t || (S[c][id].name||"") === t);
+  if(hit) return hit;
+  const id = newId(c);
+  put(c, id, c === "tags" ? {name:t, color:"slate", note:""} : {name:t, source:"", note:""});
+  renderTabs();
+  return id;
+}
+
+/* ---------- 이름(id) 바꾸기: 참조까지 같이 ---------- */
+function renameRefs(c, a, b){
+  const touch = (col, id) => put(col, id, S[col][id]);
+  if(c === "tags"){
+    for(const id in S.cards){ const d = S.cards[id]; let ch = false;
+      const f = arr => (arr||[]).map(t => { if(t === a){ ch = true; return b; } return t; });
+      d.tags = f(d.tags); for(const u of d.upgrades || []) u.tags = f(u.tags); if(ch) touch("cards", id); }
+    for(const id in S.enemies){ const d = S.enemies[id]; if((d.tags||[]).includes(a)){ d.tags = d.tags.map(t => t===a ? b : t); touch("enemies", id); } }
+  }
+  if(c === "materials"){
+    for(const id in S.cards){ const d = S.cards[id]; let ch = false;
+      for(const u of d.upgrades || []) for(const m of u.materials || []) if(m.id === a){ m.id = b; ch = true; }
+      if(ch) touch("cards", id); }
+    for(const id in S.enemies){ const d = S.enemies[id]; let ch = false;
+      for(const m of d.drops || []) if(m.id === a){ m.id = b; ch = true; }
+      if(ch) touch("enemies", id); }
+  }
+}
+function doRename(input){
+  const nu = input.value.trim(), old = sel.id, hint = $("#id-hint");
+  if(nu === old){ input.classList.remove("bad"); return; }
+  if(!ID_RE.test(nu)){ input.classList.add("bad"); hint.textContent = "영소문자·숫자·_ 만 쓸 수 있어"; hint.className = "hint warn"; return; }
+  if(S[sel.c][nu]){ input.classList.add("bad"); hint.textContent = "이미 있는 id야"; hint.className = "hint warn"; return; }
+  const c = sel.c;
+  put(c, nu, clone(draft)); put(c, old, null);
+  renameRefs(c, old, nu);
+  sel = {c, id:nu}; draft = clone(S[c][nu]);
+  renderEditor(); renderList();
+}
+
+/* ---------- 이벤트 ---------- */
+let armTimer = null;
+function arm(btn, label, fn){
+  if(btn.classList.contains("armed")){ clearTimeout(armTimer); fn(); return; }
+  btn.classList.add("armed"); const old = btn.textContent; btn.textContent = label;
+  armTimer = setTimeout(() => { btn.classList.remove("armed"); btn.textContent = old; }, 3000);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if(!b || b.tagName === "INPUT" || b.tagName === "SELECT") return;
+  const act = b.dataset.act;
+  if(act === "tab"){ tab = b.dataset.c; tagFilter = null; q = ""; renderTabs(); renderList(); if(sel && sel.c !== tab) closeEditor(); return; }
+  if(act === "open"){ openEditor(tab, b.dataset.id); return; }
+  if(act === "goto"){ tab = b.dataset.c; renderTabs(); openEditor(b.dataset.c, b.dataset.id); return; }
+  if(act === "close"){ closeEditor(); return; }
+  if(act === "tagf"){ tagFilter = tagFilter === b.dataset.v ? null : b.dataset.v; renderList(); return; }
+  if(act === "new"){
+    const id = newId(tab);
+    const base = {cards:{name:"새 카드", kind:"reward", cost:{energy:1}, effect:"", tags:[], note:"", upgrades:[]},
+      materials:{name:"새 재료", source:"", note:""},
+      enemies:{name:"새 적", hp:10, atk:2, floors:"", tags:[], drops:[], pattern:"", note:""},
+      tags:{name:"새 태그", color:"slate", note:""}}[tab];
+    put(tab, id, base); renderTabs(); openEditor(tab, id);
+    setTimeout(() => { const n = $("#ed-name"); if(n){ n.focus(); n.select(); } }, 30);
+    return;
+  }
+  if(!sel) return;
+  if(act === "delete"){ arm(b, "한 번 더 누르면 삭제", () => { put(sel.c, sel.id, null); renderTabs(); closeEditor(); }); return; }
+  if(act === "rmref"){ const arr = getPath(draft, b.dataset.path) || []; setPath(draft, b.dataset.path, arr.filter(x => x !== b.dataset.v)); commit(); renderEditor(); renderList(); return; }
+  if(act === "rmrow"){ const arr = getPath(draft, b.dataset.path) || []; arr.splice(+b.dataset.i, 1); commit(); renderEditor(); renderList(); return; }
+  if(act === "color"){ draft.color = b.dataset.v; commit(); renderEditor(); renderList(); return; }
+  if(act === "addup"){
+    draft.upgrades = draft.upgrades || [];
+    const taken = draft.upgrades.map(u => u.key);
+    let key = (VARIANTS.find(([k]) => !taken.includes(k)) || [])[0];
+    if(!key){ let n = 1; while(taken.includes("v"+n)) n++; key = "v"+n; }
+    draft.upgrades.push({key, name:(draft.name||"") + " " + ((VARIANTS.find(v => v[0]===key)||[])[1] || key), from:"default", cost:clone(draft.cost), effect:draft.effect||"", tags:[], materials:[], note:""});
+    commit(); renderEditor(); renderList();
+    setTimeout(() => { const el = $("#up-"+key); if(el) el.scrollIntoView({block:"start", behavior:"smooth"}); }, 30);
+    return;
+  }
+  if(act === "rmup"){ arm(b, "한 번 더 누르면 삭제", () => {
+      const u = draft.upgrades[+b.dataset.i];
+      for(const x of draft.upgrades) if(x.from === u.key) x.from = u.from || "default";
+      draft.upgrades.splice(+b.dataset.i, 1); commit(); renderEditor(); renderList(); }); return; }
+  if(act === "copyup"){ const u = draft.upgrades[+b.dataset.i]; u.cost = clone(draft.cost); u.effect = draft.effect || ""; commit(); renderEditor(); return; }
+  if(act === "jump"){ const el = $("#up-"+CSS.escape(b.dataset.k)); if(el){ el.open = true; el.scrollIntoView({block:"start", behavior:"smooth"}); } return; }
+});
+let listTimer = null;
+document.addEventListener("input", e => {
+  const t = e.target;
+  if(t.id === "search"){ q = t.value; renderList(); return; }
+  if(!sel || !t.dataset.f || t.tagName === "SELECT") return;
+  let v = t.value;
+  if("num" in t.dataset){ v = v === "" ? undefined : Number(v); if(t.dataset.f.includes("cost.") && !v) v = undefined; }
+  setPath(draft, t.dataset.f, v);
+  commit();
+  if(t.dataset.f === "name"){ const h = $(".ed-head h2"); if(h) h.textContent = draft.name || sel.id; }
+  clearTimeout(listTimer); listTimer = setTimeout(renderList, 250);
+});
+document.addEventListener("change", e => {
+  const t = e.target; if(!sel) return;
+  if(t.dataset.act === "rename"){ doRename(t); return; }
+  if(t.dataset.act === "rekey"){
+    const u = draft.upgrades[+t.dataset.i], old = u.key, nu = t.value;
+    for(const x of draft.upgrades) if(x.from === old) x.from = nu;
+    u.key = nu; commit(); renderEditor(); renderList(); return;
+  }
+  if(t.tagName === "SELECT" && t.dataset.f){ setPath(draft, t.dataset.f, t.value); commit(); renderEditor(); renderList(); return; }
+  if(t.dataset.add) addRef(t);
+});
+document.addEventListener("keydown", e => {
+  const t = e.target;
+  if(e.key === "Enter" && t.dataset && t.dataset.add){ e.preventDefault(); addRef(t); }
+  if(e.key === "Escape" && sel && window.innerWidth < 900) closeEditor();
+});
+function addRef(t){
+  const val = t.value; t.value = ""; if(!val.trim()) return;
+  const id = findOrCreate(t.dataset.add, val); if(!id) return;
+  const path = t.dataset.path, arr = getPath(draft, path) || [];
+  if(t.dataset.add === "tags"){ if(!arr.includes(id)) arr.push(id); }
+  else { const row = arr.find(m => m.id === id); if(row) row.count = (+row.count || 1) + 1; else arr.push({id, count:1}); }
+  setPath(draft, path, arr); commit();
+  const fid = t.id; renderEditor(); renderList();
+  const again = document.getElementById(fid); if(again) again.focus();
+}
+
+/* ---------- 내보내기 / 가져오기 ---------- */
+const J = o => JSON.stringify(o, null, 2) + "\n";
+function exportFiles(){
+  const f = {};
+  for(const id of Object.keys(S.cards).sort()){
+    const c = S.cards[id], ups = c.upgrades || [];
+    f[`cards/${id}/default.json`] = J({id, name:c.name||"", kind:c.kind||"reward", tags:c.tags||[], cost:c.cost||{}, effect:c.effect||"", note:c.note||"", upgrades:ups.map(u => u.key)});
+    for(const u of ups) f[`cards/${id}/${u.key}.json`] = J({id:`${id}_${u.key}`, name:u.name||"", from:u.from||"default", tags:u.tags||[], cost:u.cost||{}, effect:u.effect||"", materials:u.materials||[], note:u.note||""});
+  }
+  const arr = c => Object.keys(S[c]).sort().map(id => ({id, ...S[c][id]}));
+  f["materials.json"] = J(arr("materials"));
+  f["enemies.json"] = J(arr("enemies"));
+  f["tags.json"] = J(arr("tags"));
+  f["data.json"] = J({version:1, cards:arr("cards"), materials:arr("materials"), enemies:arr("enemies"), tags:arr("tags")});
+  return f;
+}
+function sheet(html){ $("#sheetHost").innerHTML = `<div class="sheet" data-close><div class="card" role="dialog" aria-modal="true">${html}</div></div>`; }
+document.addEventListener("click", e => { if(e.target.matches(".sheet[data-close]") || e.target.closest("[data-sheet-close]")) $("#sheetHost").innerHTML = ""; });
+
+$("#btnExport").addEventListener("click", () => {
+  const n = Object.keys(S.cards).length;
+  sheet(`<h3>내보내기</h3>
+    <p>카드 ${n}장을 <span class="mono">cards/&lt;id&gt;/default.json</span>과 강화별 <span class="mono">red.json</span> 같은 파일로 나눠서 zip 하나로 묶어. 재료·적·태그는 각각 json 하나, 전체 백업은 <span class="mono">data.json</span>.</p>
+    <div class="acts">
+      <button class="btn primary" type="button" id="doZip">zip 저장</button>
+      <button class="btn" type="button" id="doCopy">전체 JSON 복사</button>
+      <button class="btn" type="button" data-sheet-close>닫기</button></div>
+    <p id="exMsg"></p>`);
+  $("#doZip").onclick = async () => {
+    const msg = $("#exMsg");
+    if(!window.JSZip){ msg.textContent = "zip 라이브러리를 못 불러왔어. 전체 JSON 복사를 써."; return; }
+    const zip = new JSZip(); const files = exportFiles();
+    for(const p in files) zip.file(p, files[p]);
+    const blob = await zip.generateAsync({type:"blob"});
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "kortfinite_cards.zip";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    msg.textContent = "다운로드를 시작했어.";
+  };
+  $("#doCopy").onclick = async () => {
+    const text = exportFiles()["data.json"];
+    try{ await navigator.clipboard.writeText(text); $("#exMsg").textContent = "복사했어."; }
+    catch(err){ $("#exMsg").innerHTML = `<textarea readonly id="exText">${esc(text)}</textarea>`; const ta = $("#exText"); ta.focus(); ta.select(); }
+  };
+});
+
+$("#btnImport").addEventListener("click", () => {
+  sheet(`<h3>가져오기</h3>
+    <p>내보낸 zip, <span class="mono">data.json</span>, 또는 <span class="mono">cards/</span> 폴더가 든 zip을 고르면 돼. 같은 id는 덮어쓰고 나머지는 그대로 둬.</p>
+    <div class="acts"><button class="btn primary" type="button" id="pick">파일 고르기</button>
+      <button class="btn" type="button" data-sheet-close>닫기</button></div>
+    <p id="imMsg"></p>`);
+  $("#pick").onclick = () => $("#fileIn").click();
+});
+$("#fileIn").addEventListener("change", async e => {
+  const file = e.target.files[0]; e.target.value = ""; if(!file) return;
+  const msg = $("#imMsg");
+  try{
+    let n;
+    if(/\.zip$/i.test(file.name)){
+      if(!window.JSZip) throw new Error("zip 라이브러리 없음");
+      const zip = await JSZip.loadAsync(file);
+      const files = {};
+      for(const p in zip.files) if(!zip.files[p].dir && p.endsWith(".json")) files[p.replace(/^.*?(cards\/|materials\.json|enemies\.json|tags\.json|data\.json)/, "$1")] = JSON.parse(await zip.files[p].async("string"));
+      n = files["data.json"] ? importBackup(files["data.json"]) : importFolders(files);
+    } else {
+      const o = JSON.parse(await file.text());
+      n = importBackup(o);
+    }
+    renderTabs(); renderList(); if(sel){ draft = clone(S[sel.c][sel.id] || {}); renderEditor(); }
+    if(msg) msg.textContent = `${n}개 항목을 불러왔어.`;
+  }catch(err){ if(msg) msg.textContent = "못 읽었어: " + err.message; }
+});
+function strip(o){ const r = clone(o); delete r.id; return r; }
+function importBackup(o){
+  let n = 0;
+  for(const c in COLS){ for(const it of o[c] || []){ if(it && it.id && ID_RE.test(it.id)){ put(c, it.id, strip(it)); n++; } } }
+  return n;
+}
+function importFolders(files){
+  let n = 0; const cards = {};
+  for(const p in files){
+    const m = p.match(/^cards\/([^/]+)\/([^/]+)\.json$/); if(!m) continue;
+    const [, cid, key] = m; (cards[cid] = cards[cid] || {ups:{}});
+    if(key === "default") cards[cid].base = files[p]; else cards[cid].ups[key] = files[p];
+  }
+  for(const cid in cards){
+    if(!ID_RE.test(cid)) continue;
+    const b = cards[cid].base || {}, ups = cards[cid].ups;
+    const order = (b.upgrades || []).filter(k => ups[k]).concat(Object.keys(ups).filter(k => !(b.upgrades||[]).includes(k)));
+    put("cards", cid, {name:b.name||cid, kind:b.kind||"reward", cost:b.cost||{}, effect:b.effect||"", tags:b.tags||[], note:b.note||"",
+      upgrades:order.map(k => { const u = ups[k]; return {key:k, name:u.name||k, from:u.from||"default", cost:u.cost||{}, effect:u.effect||"", tags:u.tags||[], materials:u.materials||[], note:u.note||""}; })});
+    n++;
+  }
+  for(const c of ["materials","enemies","tags"]) for(const it of files[c+".json"] || []) if(it && it.id && ID_RE.test(it.id)){ put(c, it.id, strip(it)); n++; }
+  return n;
+}
+
+/* ---------- 시작 ---------- */
+function login(){
+  const p = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(p).catch(e => {
+    if(/popup-blocked|operation-not-supported|popup-closed-by-user|cancelled-popup/.test(e.code || "")){ if(e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment") auth.signInWithRedirect(p); }
+    else setStatus("로그인 실패: " + (e.code || e.message));
+  });
+}
+function init(){
+  renderTabs(); renderList(); renderEditor();
+  if(!window.firebase){ setStatus("Firebase를 못 불러왔어"); return; }
+  firebase.initializeApp(FB_CONFIG);
+  auth = firebase.auth(); rdb = firebase.database();
+  auth.getRedirectResult().catch(e => setStatus("로그인 실패: " + (e.code || e.message)));
+  $("#btnAuth").onclick = () => user ? auth.signOut() : login();
+  auth.onAuthStateChanged(u => {
+    user = u;
+    $("#who").textContent = u ? (u.email || "") : "";
+    $("#btnAuth").textContent = u ? "로그아웃" : "로그인";
+    if(u){ mode = "wait"; setStatus("연결하는 중…"); subscribe(); }
+    else { unsubscribe(); for(const c in COLS) S[c] = {}; mode = "signedout"; setStatus("로그인 필요"); closeEditor(); renderTabs(); }
+    renderList();
+  });
+}
+init();
+</script>
+</body>
+</html>
