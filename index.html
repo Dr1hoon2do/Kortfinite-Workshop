@@ -1,15 +1,9 @@
-<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Kortfinite 카드 공방</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
 /* Layout: 장부 형태. 왼쪽 목록, 오른쪽 편집기 (폰에서는 편집기가 화면을 덮는다). 비용 색은 게임 자원색 그대로 */
 :root{
@@ -37,11 +31,8 @@
   --t-slate:#97a1ac; --t-red:#ec6b6b; --t-amber:#e8ad3a; --t-green:#5cc48a; --t-teal:#4cc2b8; --t-blue:#6aa1f0; --t-violet:#a989e6; --t-pink:#e87bb0;
   --warn:#f08a5d; color-scheme:dark}
 
-*,*::before,*::after{box-sizing:border-box}
-[hidden]{display:none!important}
 html,body{height:100%}
-:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;display:flex;flex-direction:column}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;display:flex;flex-direction:column}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -77,7 +68,22 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr)}
 
 .listbar{display:flex;gap:8px;margin-bottom:10px}
 .listbar input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 10px}
-.filters{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.qhint[hidden]{display:none}
+.qhint{font-size:11px;color:var(--muted);margin:-4px 0 10px;line-height:1.6}
+.qhint code{font-family:var(--f-mono);font-size:11px;background:var(--sunk);padding:0 4px;border-radius:3px;cursor:pointer}
+.adder.col{flex-direction:column;align-items:stretch}
+.sugg{display:flex;flex-wrap:wrap;gap:5px;max-height:88px;overflow-y:auto;border:1px solid var(--line);border-radius:6px;padding:5px;background:var(--surface);overscroll-behavior:contain}
+.sugg .chip{cursor:pointer;background:var(--surface)}
+.sugg[hidden],.recs[hidden]{display:none}
+.lintf{display:flex;flex-wrap:wrap;gap:5px}
+.lintf .chip{cursor:pointer}
+.lintf .chip[aria-pressed="false"]{opacity:.45}
+.sugg .new{color:var(--muted);border-style:dashed}
+.recs{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:6px;font-size:12px;color:var(--muted)}
+.recs .chip{cursor:pointer;border-style:dashed}
+.lint{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}
+.lint .use{font-size:13px}
+.lint .k{font-size:11px;color:var(--warn);font-family:var(--f-mono)}
 .rows{display:flex;flex-direction:column;gap:6px}
 .row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 11px}
 .row:hover{border-color:var(--accent)}
@@ -161,22 +167,16 @@ section.blk>h3 .sp{flex:1}
 .sheet .acts{display:flex;flex-wrap:wrap;gap:8px}
 .sheet textarea{width:100%;min-height:140px;font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:8px}
 @media (prefers-reduced-motion:no-preference){.row,.btn,.chip{transition:background-color .12s,border-color .12s}}
-.who{font-size:12px;color:var(--muted);max-width:14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gate{max-width:44ch;display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:28px 4px;color:var(--muted);line-height:1.7}
-.gate code{font-family:var(--f-mono);font-size:12px;background:var(--sunk);padding:1px 5px;border-radius:4px;color:var(--ink);word-break:break-all}
 </style>
-</head>
-<body>
 
 <header>
   <div class="top">
     <h1>카드 공방<small>Kortfinite</small></h1>
     <span id="status">불러오는 중…</span>
-    <span class="who" id="who"></span>
-    <button class="btn" id="btnAuth" type="button">로그인</button>
+    <button class="btn" id="btnLint" type="button">점검</button>
     <button class="btn" id="btnImport" type="button">가져오기</button>
     <button class="btn primary" id="btnExport" type="button">내보내기</button>
-    <input type="file" id="fileIn" accept=".zip,.json,application/zip,application/json" hidden>
+    <input type="file" id="fileIn" accept=".zip,.json,.txt,application/zip,application/json,text/plain,application/octet-stream" hidden>
   </div>
   <nav class="tabs" id="tabs" role="tablist"></nav>
 </header>
@@ -192,13 +192,13 @@ const COLS = {cards:"카드", materials:"재료", enemies:"적", tags:"태그"};
 const PREFIX = {cards:"card", materials:"mat", enemies:"enemy", tags:"tag"};
 const COST = [["energy","기력"],["mana","마나"],["hp","체력"],["gold","골드"]];
 const KINDS = [["basic","기본"],["reward","보상"],["special","특수"]];
-const VARIANTS = [["red","빨강"],["blue","파랑"],["yellow","노랑"],["green","초록"],["purple","보라"]];
+const VARIANTS = [["red","빨강","붉은"],["blue","파랑","푸른"],["yellow","노랑","노란"],["green","초록","초록"],["purple","보라","보랏빛"]];
 const TAGCOLORS = ["slate","red","amber","green","teal","blue","violet","pink"];
 const ID_RE = /^[a-z0-9_]+$/;
 
 const S = {cards:{}, materials:{}, enemies:{}, tags:{}};
 let tab = "cards", sel = null, q = "", tagFilter = null, draft = null;
-let mode = "wait";
+let db = null, dl = null, mode = "wait";
 
 const $ = (s, r=document) => r.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -206,60 +206,50 @@ const clone = o => JSON.parse(JSON.stringify(o ?? {}));
 const sortIds = c => Object.keys(S[c]).sort((a,b) => (S[c][a].name||a).localeCompare(S[c][b].name||b, "ko"));
 function setStatus(t){ $("#status").textContent = t; }
 
-/* ---------- 저장 (Firebase Realtime Database) ---------- */
-const FB_CONFIG = {
-  apiKey: "AIzaSyB5S27pJjTTtSzXUsCLNbBQPcb_P1m7Eso",
-  authDomain: "kortfinite-drhoondo.firebaseapp.com",
-  databaseURL: "https://kortfinite-drhoondo-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "kortfinite-drhoondo",
-  storageBucket: "kortfinite-drhoondo.firebasestorage.app",
-  messagingSenderId: "877620571174",
-  appId: "1:877620571174:web:e4c5de11366c19012dcae7"
-};
-const ROOT = "workshop";
-let user = null, rdb = null, auth = null, listeners = [], loaded = {};
-const pending = new Map(); let qtimer = null;
-const arr = v => Array.isArray(v) ? v.filter(x => x != null) : (v && typeof v === "object" ? Object.values(v) : []);
-function norm(c, d){
-  d = clone(d);
-  if(c === "cards"){ d.cost = d.cost || {}; d.tags = arr(d.tags); d.upgrades = arr(d.upgrades).map(u => ({...u, cost:u.cost||{}, tags:arr(u.tags), materials:arr(u.materials)})); }
-  if(c === "enemies"){ d.tags = arr(d.tags); d.drops = arr(d.drops); }
-  return d;
-}
+/* ---------- 저장 ---------- */
+const LS = "kortfinite-workshop-v1";
+function lsLoad(){ try{ const o = JSON.parse(localStorage.getItem(LS) || "null"); if(o) for(const c in COLS) S[c] = o[c] || {}; }catch(e){} }
+function lsSave(){ try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){} }
+
+const pending = new Map(); let inflight = null, busy = false, qtimer = null;
 function put(c, id, data){
   if(data === null) delete S[c][id]; else S[c][id] = data;
-  if(!user){ setStatus("로그인해야 저장돼"); return; }
-  pending.set(c+"/"+id, {c, id, data}); clearTimeout(qtimer); qtimer = setTimeout(flush, 400); setStatus("저장 대기…");
+  if(db){ pending.set(c+"/"+id, {c, id, data}); clearTimeout(qtimer); qtimer = setTimeout(pump, 450); setStatus("저장 대기…"); }
+  else { lsSave(); setStatus("이 기기에 저장됨"); }
 }
-async function flush(){
-  if(!pending.size) return;
-  const upd = {};
-  for(const [k, p] of pending) upd[k] = p.data === null ? null : clone(p.data);
-  pending.clear(); setStatus("저장 중…");
-  try{ await rdb.ref(ROOT).update(upd); if(!pending.size) setStatus("저장됨"); }
-  catch(e){ setStatus("저장 실패: " + (e.code || e.message)); if(/permission/i.test(e.code || e.message)) showPerm(); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function pump(){
+  if(busy) return; busy = true;
+  while(pending.size){
+    const [k, p] = pending.entries().next().value; pending.delete(k); inflight = k;
+    setStatus("저장 중… " + (pending.size ? "(" + (pending.size+1) + ")" : ""));
+    try{
+      const ref = db.collection(p.c).doc(p.id);
+      if(p.data === null) await ref.delete(); else await ref.set(p.data);
+    }catch(e){
+      if(e && (e.code === "unavailable" || e.code === "resource_exhausted")){ await sleep(1200 + Math.random()*1200); if(!pending.has(k)) pending.set(k, p); }
+      else { setStatus("저장 실패: " + (e && (e.code || e.message))); }
+    }
+    inflight = null;
+  }
+  busy = false; setStatus("저장됨");
 }
 function subscribe(){
-  unsubscribe();
   for(const c in COLS){
-    const ref = rdb.ref(ROOT + "/" + c);
-    const fn = ref.on("value", snap => {
-      const v = snap.val() || {}, next = {};
-      for(const id in v) next[id] = pending.has(c+"/"+id) && S[c][id] ? S[c][id] : norm(c, v[id]);
+    db.collection(c).limit(1000).onSnapshot(snap => {
+      const next = {};
+      for(const d of snap.docs){
+        const k = c+"/"+d.id;
+        next[d.id] = (pending.has(k) || inflight === k) && S[c][d.id] ? S[c][d.id] : clone(d.data());
+      }
       for(const [k, p] of pending){ if(p.c !== c) continue; if(p.data === null) delete next[p.id]; else next[p.id] = S[c][p.id]; }
-      S[c] = next; loaded[c] = true;
-      if(mode !== "db" && Object.keys(COLS).every(k => loaded[k])){ mode = "db"; setStatus("연결됨"); }
+      S[c] = next;
+      if(mode !== "db"){ mode = "db"; setStatus("저장됨"); }
       renderTabs(); renderList();
-      if(sel && sel.c === c && !S[c][sel.id]) closeEditor();
-    }, err => { setStatus("읽기 거부됨"); mode = "denied"; renderList(); });
-    listeners.push(() => ref.off("value", fn));
+      if(sel && sel.c === c && !S[c][sel.id]){ closeEditor(); }
+      else if(sel && sel.c !== tab) {}
+    }, e => setStatus("동기화 끊김: " + (e && e.code)));
   }
-}
-function unsubscribe(){ listeners.forEach(f => f()); listeners = []; loaded = {}; }
-function showPerm(){
-  sheet(`<h3>저장 권한이 없어</h3>
-    <p>Firebase 콘솔 → Realtime Database → 규칙에서 이 계정을 허용해야 해. 지금 로그인한 계정은 <span class="mono">${esc(user && user.email)}</span>야.</p>
-    <div class="acts"><button class="btn" type="button" data-sheet-close>닫기</button></div>`);
 }
 
 /* ---------- 조회 ---------- */
@@ -295,12 +285,41 @@ function renderTabs(){
   $("#tabs").innerHTML = Object.entries(COLS).map(([c,l]) =>
     `<button class="tab" role="tab" aria-selected="${c===tab}" data-act="tab" data-c="${c}">${l}<span class="n">${Object.keys(S[c]).length}</span></button>`).join("");
 }
-function matches(c, id){
-  const d = S[c][id];
-  if(tagFilter && !(d.tags||[]).includes(tagFilter) && !(d.upgrades||[]).some(u => (u.tags||[]).includes(tagFilter))) return false;
-  if(!q) return true;
+// 검색어: 그냥 글자는 이름·id·효과 어디든. 따옴표로 띄어쓰기 묶기.
+//   tag:공격  tag:"화상"  (강화 카드의 태그도 본다)   -tag:이동 (빼기)
+//   kind:보상 / kind:기본     has:강화  has:재료  no:태그  no:강화  no:재료
+function parseQuery(text){
+  const out = [];
+  const re = /(-?)(\w+):"([^"]*)"|(-?)(\w+):(\S+)|"([^"]*)"|(\S+)/g;
+  let m;
+  while((m = re.exec(text))){
+    if(m[2]) out.push({neg:!!m[1], key:m[2].toLowerCase(), val:m[3]});
+    else if(m[5]) out.push({neg:!!m[4], key:m[5].toLowerCase(), val:m[6]});
+    else out.push({neg:false, key:null, val:m[7] ?? m[8]});
+  }
+  return out;
+}
+function tagIdsFor(val){
+  const v = val.toLowerCase();
+  return Object.keys(S.tags).filter(id => id.toLowerCase() === v || (S.tags[id].name||"").toLowerCase() === v);
+}
+function allTags(d){ return [...(d.tags||[]), ...(d.upgrades||[]).flatMap(u => u.tags||[])]; }
+function test(c, id, d, t){
+  const v = (t.val || "").toLowerCase();
+  if(t.key === "tag"){ const ids = tagIdsFor(t.val); return allTags(d).some(x => ids.includes(x)); }
+  if(t.key === "kind"){ const k = KINDS.find(([a,b]) => a === v || b === t.val); return !!k && d.kind === k[0]; }
+  if(t.key === "has" || t.key === "no"){
+    const want = t.key === "has";
+    const f = {"강화":() => (d.upgrades||[]).length > 0, "재료":() => (d.upgrades||[]).some(u => (u.materials||[]).length) || (d.drops||[]).length > 0, "태그":() => allTags(d).length > 0, "비고":() => !!d.note}[t.val];
+    return f ? f() === want : true;
+  }
   const hay = (id + " " + JSON.stringify(d)).toLowerCase();
-  return q.toLowerCase().split(/\s+/).every(w => hay.includes(w));
+  return hay.includes(t.key ? t.key + ":" + v : v);
+}
+function matches(c, id){
+  if(!q.trim()) return true;
+  const d = S[c][id];
+  return parseQuery(q).every(t => test(c, id, d, t) !== t.neg);
 }
 function rowMeta(c, id){
   const d = S[c][id];
@@ -314,24 +333,31 @@ function rowMeta(c, id){
 }
 function renderList(){
   const el = $("#list");
-  if(mode === "wait"){ el.innerHTML = `<p class="empty">연결하는 중…</p>`; return; }
-  if(mode === "signedout"){ el.innerHTML = `<div class="gate"><b style="color:var(--ink)">구글 계정으로 로그인해야 써.</b><span>데이터는 Firebase에 저장되고, 폰이든 PC든 같은 계정으로 들어오면 같은 내용이 보여.</span><button class="btn primary" type="button" id="gateLogin">구글로 로그인</button></div>`; $("#gateLogin").onclick = login; return; }
-  if(mode === "denied"){ el.innerHTML = `<div class="gate"><b style="color:var(--ink)">이 계정은 아직 허용 안 됐어.</b><span>Firebase 콘솔 → Realtime Database → 규칙에 이 메일을 넣어:</span><code>${esc(user && user.email)}</code><button class="btn" type="button" id="gateOut">다른 계정으로</button></div>`; $("#gateOut").onclick = () => auth.signOut(); return; }
+  if(mode === "wait"){ el.innerHTML = `<p class="empty">저장소에 연결하는 중…</p>`; return; }
   const ids = sortIds(tab).filter(id => matches(tab, id));
-  const hasTags = (tab === "cards" || tab === "enemies") && Object.keys(S.tags).length;
-  const focused = document.activeElement && document.activeElement.id === "search";
-  el.innerHTML = `
+  const hint = tab === "cards" ? `예) <code data-q='tag:"공격"'>tag:"공격"</code> <code data-q="-tag:이동">-tag:이동</code> <code data-q="kind:보상">kind:보상</code> <code data-q="has:강화">has:강화</code> <code data-q="no:태그">no:태그</code>`
+    : tab === "enemies" ? `예) <code data-q='tag:"독"'>tag:"독"</code> <code data-q="no:재료">no:재료</code>` : "";
+  // 검색창은 한 번만 만들고 아래 목록만 다시 그린다 (다시 만들면 한글 조합이 끊겨 "ㄴㅏㄷㅏ"가 된다)
+  let bar = el.querySelector("#search");
+  if(!bar || el.dataset.tab !== tab){
+    el.dataset.tab = tab;
+    el.innerHTML = `
     <div class="listbar">
-      <input id="search" type="search" placeholder="${COLS[tab]} 검색 (이름·id·효과)" value="${esc(q)}" autocomplete="off">
+      <input id="search" type="search" placeholder="${COLS[tab]} 검색 (tag:이름도 된다)" value="${esc(q)}" autocomplete="off" autocapitalize="off" spellcheck="false">
       <button class="btn primary" type="button" data-act="new">+ 새 ${COLS[tab]}</button>
     </div>
-    ${hasTags ? `<div class="filters">${sortIds("tags").map(t => `<button type="button" class="chip link ${tagFilter && tagFilter!==t ? "off" : ""}" style="color:var(--t-${S.tags[t].color||"slate"})" data-act="tagf" data-v="${esc(t)}">${esc(S.tags[t].name||t)}</button>`).join("")}</div>` : ""}
-    <div class="rows">${ids.length ? ids.map(id => `
+    <div class="qhint" id="qhint"></div>
+    <div class="rows" id="rows"></div>`;
+    bar = el.querySelector("#search");
+  } else if(bar.value !== q && document.activeElement !== bar) bar.value = q;
+  const qh = el.querySelector("#qhint");
+  qh.innerHTML = hint;
+  qh.hidden = !hint;
+  el.querySelector("#rows").innerHTML = ids.length ? ids.map(id => `
       <button type="button" class="row ${sel && sel.c===tab && sel.id===id ? "sel" : ""}" data-act="open" data-id="${esc(id)}">
         <span class="nm">${esc(S[tab][id].name || id)}</span><span class="id mono">${esc(id)}</span>
         <span class="meta">${rowMeta(tab, id)}</span>
-      </button>`).join("") : `<p class="empty">${Object.keys(S[tab]).length ? "검색에 맞는 항목이 없어." : emptyText(tab)}</p>`}</div>`;
-  if(focused){ const s = $("#search"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+      </button>`).join("") : `<p class="empty">${Object.keys(S[tab]).length ? "검색에 맞는 항목이 없어." : emptyText(tab)}</p>`;
 }
 function emptyText(c){
   return {cards:"아직 카드가 없어. ‘+ 새 카드’로 만들거나, 가져오기로 zip·json을 불러와.",
@@ -354,17 +380,125 @@ function costRow(path, cost){
 function tagField(path, tags){
   return `<div class="f wide"><span class="lab">태그</span>
     <div class="refs">${(tags||[]).map(t => tagChip(t, true, path)).join("") || `<span class="hint">없음</span>`}</div>
-    <div class="adder"><input list="dl-tags" placeholder="태그 이름 치고 엔터 (없으면 새로 생김)" data-add="tags" data-path="${path}" id="add-${path}"></div></div>`;
+    ${adder("tags", path, "태그 이름 (고르거나 치고 엔터)")}${recRow(path)}</div>`;
 }
 function matRows(path, list){
   return `${(list||[]).map((m,i) => `<div class="mrow">
       <span class="mn ${S.materials[m.id]?"":"missing"}">${esc(nm("materials", m.id) || (m.id + " (없음)"))}</span>
       <input type="number" inputmode="numeric" min="1" aria-label="수량" id="${path}-${i}-n" data-f="${path}.${i}.count" data-num value="${m.count ?? 1}">
       <button type="button" class="x" data-act="rmrow" data-path="${path}" data-i="${i}" aria-label="빼기">×</button></div>`).join("")}
-    <div class="adder"><input list="dl-materials" placeholder="재료 이름 치고 엔터" data-add="materials" data-path="${path}" id="add-${path}"></div>`;
+    ${adder("materials", path, "재료 이름 (고르거나 치고 엔터)")}`;
 }
-function datalists(){
-  return ["tags","materials"].map(c => `<datalist id="dl-${c}">${sortIds(c).map(id => `<option value="${esc(S[c][id].name||id)}">`).join("")}</datalist>`).join("");
+// 입력칸 위에 뜨는 고르기 칸 (최대 3줄, 넘치면 그 안에서 스크롤). 키보드를 가리지 않게 브라우저 목록(datalist)은 안 쓴다
+function adder(c, path, ph){
+  return `<div class="adder col"><div class="sugg" id="sugg-${path}" hidden></div><input placeholder="${ph}" data-add="${c}" data-path="${path}" id="add-${path}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done"></div>`;
+}
+function usage(c, id){
+  if(c === "tags") return tagUses(id).length;
+  return matUses(id).length + matDrops(id).length;
+}
+function showSugg(t){
+  const box = document.getElementById("sugg-" + t.dataset.path);
+  if(!box || !sel) return;
+  const c = t.dataset.add, v = t.value.trim().toLowerCase();
+  const cur = getPath(draft, t.dataset.path) || [];
+  const have = c === "tags" ? cur : cur.map(m => m.id);
+  let ids = Object.keys(S[c]).filter(id => c !== "tags" || !have.includes(id));
+  if(v) ids = ids.filter(id => id.toLowerCase().includes(v) || (S[c][id].name||"").toLowerCase().includes(v));
+  ids.sort((a,b) => usage(c, b) - usage(c, a) || (S[c][a].name||a).localeCompare(S[c][b].name||b, "ko"));
+  const exact = v && Object.keys(S[c]).some(id => (S[c][id].name||"").toLowerCase() === v || id.toLowerCase() === v);
+  const chips = ids.map(id => c === "tags"
+      ? `<button type="button" class="chip" data-pick="${esc(id)}" style="color:var(--t-${S.tags[id].color||"slate"})">${esc(S.tags[id].name||id)}</button>`
+      : `<button type="button" class="chip" data-pick="${esc(id)}">${esc(S.materials[id].name||id)}${have.includes(id) ? " +1" : ""}</button>`).join("");
+  const make = v && !exact ? `<button type="button" class="chip new" data-make="1">+ "${esc(t.value.trim())}" 새로 만들기</button>` : "";
+  box.innerHTML = chips + make;
+  box.hidden = !(chips || make);
+}
+function hideSugg(){ document.querySelectorAll(".sugg").forEach(b => (b.hidden = true)); }
+
+// ---------- 알아서 추천 ----------
+// 효과·패턴 글에 태그 이름이 나오거나, 아래 말이 나오면 그 태그를 추천한다 (있는 태그만)
+const TAG_HINTS = [
+  [/피해|공격|치기|찌르|베기/, ["공격", "attack"]],
+  [/이동|순간이동|구르|돌진|뛰어/, ["이동", "move"]],
+  [/방어도/, ["방어", "defense"]],
+  [/마나/, ["마나", "mana"]],
+  [/체력|흡혈/, ["체력", "health"]],
+  [/드로우|뽑/, ["드로우", "draw"]],
+  [/던지|던져|발사|쏘|화살/, ["원거리", "ranged"]],
+  [/범위|주변|\d+칸 범위/, ["범위", "area"]],
+  [/제거|정화/, ["정화", "cleanse"]]
+];
+function recTags(text, have, forEnemy = false){
+  // 능력치 이름(공격력·방어력·이동속도·최대체력)은 태그가 아니라 수치라서 빼고 본다
+  text = (text || "").replace(/공격력|방어력|이동속도|최대\s*체력/g, " ");
+  const out = new Set();
+  // 태그 이름이 글에 나오면. 한 글자 이름(독·힘)은 앞 글자가 한글이 아닐 때만 ("막힘"의 힘은 아니다)
+  for(const id of Object.keys(S.tags)){
+    const n = S.tags[id].name;
+    if(!n) continue;
+    const re = n.length === 1 ? new RegExp(`(^|[^가-힣])${n}`) : null;
+    if(re ? re.test(text) : text.includes(n)) out.add(id);
+  }
+  for(const [re, names] of TAG_HINTS){
+    if(!re.test(text)) continue;
+    const id = Object.keys(S.tags).find(k => names.includes(S.tags[k].name) || names.includes(k));
+    if(id) out.add(id);
+  }
+  // 적은 다 치고 움직이니까 공격·이동은 추천하지 않는다
+  if(forEnemy) for(const id of [...out]) if(["공격", "이동"].includes(S.tags[id].name) || ["attack", "move"].includes(id)) out.delete(id);
+  return [...out].filter(id => !(have||[]).includes(id));
+}
+// 이 태그 칸에 맞는 글 (카드·강화: 효과, 적: 패턴)
+function recSource(path){
+  if(path === "tags") return sel.c === "enemies" ? (draft.pattern || "") : (draft.effect || "");
+  const m = path.match(/^upgrades\.(\d+)\.tags$/);
+  return m ? ((draft.upgrades[+m[1]] || {}).effect || "") : "";
+}
+function recRow(path){
+  if(!sel) return "";
+  const rec = recTags(recSource(path), getPath(draft, path), sel.c === "enemies");
+  if(!rec.length) return `<div class="recs" id="recs-${path}" hidden></div>`;
+  return `<div class="recs" id="recs-${path}">추천 ${rec.map(id => `<button type="button" class="chip" data-act="rec" data-path="${path}" data-v="${esc(id)}" style="color:var(--t-${S.tags[id].color||"slate"})">+ ${esc(S.tags[id].name||id)}</button>`).join("")}
+    ${rec.length > 1 ? `<button type="button" class="btn" data-act="recall" data-path="${path}" style="padding:2px 8px;font-size:12px">모두</button>` : ""}</div>`;
+}
+
+// ---------- 점검 ----------
+function lint(){
+  const out = [];
+  const add = (c, id, k, text) => out.push({c, id, k, text});
+  const usedTags = new Set();
+  for(const id of sortIds("cards")){
+    const d = S.cards[id];
+    allTags(d).forEach(t => usedTags.add(t));
+    if(!(d.effect||"").trim()) add("cards", id, "효과", `${d.name||id}: 효과가 비었다`);
+    if(!(d.tags||[]).length) add("cards", id, "태그", `${d.name||id}: 태그가 없다`);
+    const r = recTags(d.effect, d.tags); if(r.length) add("cards", id, "추천", `${d.name||id}: 추천 태그 ${r.map(t => S.tags[t].name).join(", ")}`);
+    for(const u of d.upgrades||[]){
+      const nm = u.name || u.key;
+      if(!(u.effect||"").trim()) add("cards", id, "효과", `${nm} (${d.name}): 효과가 비었다`);
+      if(!(u.tags||[]).length) add("cards", id, "태그", `${nm} (${d.name}): 태그가 없다`);
+      const ru = recTags(u.effect, u.tags); if(ru.length) add("cards", id, "추천", `${nm} (${d.name}): 추천 태그 ${ru.map(t => S.tags[t].name).join(", ")}`);
+      if(!(u.materials||[]).length) add("cards", id, "재료", `${nm} (${d.name}): 강화 재료가 없다`);
+      for(const m of u.materials||[]) if(!S.materials[m.id]) add("cards", id, "없음", `${nm}: 없는 재료 ${m.id}`);
+      for(const t of u.tags||[]) if(!S.tags[t]) add("cards", id, "없음", `${nm}: 없는 태그 ${t}`);
+    }
+    for(const t of d.tags||[]) if(!S.tags[t]) add("cards", id, "없음", `${d.name||id}: 없는 태그 ${t}`);
+  }
+  for(const id of sortIds("enemies")){
+    const d = S.enemies[id];
+    (d.tags||[]).forEach(t => usedTags.add(t));
+    if(!(d.drops||[]).length) add("enemies", id, "재료", `${d.name||id}: 드랍이 없다`);
+    const r = recTags(d.pattern, d.tags, true); if(r.length) add("enemies", id, "추천", `${d.name||id}: 추천 태그 ${r.map(t => S.tags[t].name).join(", ")}`);
+    for(const m of d.drops||[]) if(!S.materials[m.id]) add("enemies", id, "없음", `${d.name||id}: 없는 재료 ${m.id}`);
+  }
+  for(const id of sortIds("tags")) if(!usedTags.has(id)) add("tags", id, "안 씀", `태그 ${S.tags[id].name||id}: 아무 데도 안 붙었다`);
+  for(const id of sortIds("materials")) if(!matUses(id).length && !matDrops(id).length) add("materials", id, "안 씀", `재료 ${S.materials[id].name||id}: 쓰이는 곳·나오는 곳이 없다`);
+  return out;
+}
+function upgradeName(base, key){
+  const v = VARIANTS.find(x => x[0] === key);
+  return v ? `${v[2]} ${base}` : `${base} ${key}`;
 }
 function head(){
   return `<div class="ed-head">
@@ -380,7 +514,7 @@ function renderEditor(resetScroll){
   if(!sel){ el.innerHTML = `<p class="ed-empty">왼쪽에서 항목을 고르면 여기서 편집해. 바꾼 내용은 바로 저장돼.</p>`; return; }
   const top = el.scrollTop;
   const c = sel.c, d = draft;
-  let h = head() + datalists();
+  let h = head();
   if(c === "cards") h += cardEditor(d);
   if(c === "materials") h += materialEditor(d);
   if(c === "enemies") h += enemyEditor(d);
@@ -477,7 +611,7 @@ function enemyEditor(d){
         <input type="number" inputmode="numeric" min="1" aria-label="수량" id="${p}-${i}-n" data-f="${p}.${i}.count" data-num value="${m.count ?? 1}">
         <input type="number" inputmode="numeric" min="0" max="100" aria-label="확률" id="${p}-${i}-c" data-f="${p}.${i}.chance" data-num value="${m.chance ?? ""}" placeholder="100">
         <button type="button" class="x" data-act="rmrow" data-path="${p}" data-i="${i}" aria-label="빼기">×</button></div>`).join("")}
-      <div class="adder"><input list="dl-materials" placeholder="재료 이름 치고 엔터" data-add="materials" data-path="${p}" id="add-${p}"></div>
+      ${adder("materials", p, "재료 이름 (고르거나 치고 엔터)")}
     </section>`;
 }
 function tagEditor(d){
@@ -488,6 +622,7 @@ function tagEditor(d){
       <div class="f wide"><span class="lab">색</span><div class="swatches">${TAGCOLORS.map(k => `<button type="button" class="sw" style="--c:var(--t-${k})" aria-label="${k}" aria-pressed="${(d.color||"slate")===k}" data-act="color" data-v="${k}"></button>`).join("")}</div></div>
       <div class="f wide"><label for="ed-note">설명</label><textarea id="ed-note" data-f="note" placeholder="이 태그가 붙은 카드가 받는 효과, 시너지 메모">${esc(d.note)}</textarea></div>
     </div>
+    <div class="adder"><button type="button" class="btn" data-act="findtag" data-v="${esc(d.name||sel.id)}">이 태그가 붙은 카드 찾기</button></div>
     <section class="blk"><h3>붙어 있는 곳<span class="sp"></span><span class="hint mono">${uses.length}</span></h3>
       <div class="uses">${uses.map(x => `<button type="button" class="use" data-act="goto" data-c="${x.c}" data-id="${esc(x.id)}"><span class="hint">${COLS[x.c]}</span><span class="sp">${esc(x.label)}</span></button>`).join("") || `<p class="hint">아직 안 붙어 있어.</p>`}</div></section>`;
 }
@@ -547,14 +682,36 @@ function arm(btn, label, fn){
   btn.classList.add("armed"); const old = btn.textContent; btn.textContent = label;
   armTimer = setTimeout(() => { btn.classList.remove("armed"); btn.textContent = old; }, 3000);
 }
+// 고르기 칸: 누르는 순간 입력칸 초점이 빠지지 않게 (모바일 키보드가 내려갔다 올라오지 않게)
+document.addEventListener("pointerdown", e => { if(e.target.closest(".sugg")) e.preventDefault(); });
+document.addEventListener("click", e => {
+  const pick = e.target.closest("[data-pick],[data-make]");
+  if(pick){
+    const box = pick.closest(".sugg"); const t = box && box.nextElementSibling;
+    if(t && t.dataset.add){ if(pick.dataset.pick) addRefId(t, pick.dataset.pick); else addRef(t); }
+    return;
+  }
+  const qc = e.target.closest("code[data-q]");
+  if(qc){ q = qc.dataset.q; const s = $("#search"); if(s) s.value = q; renderList(); if(s){ s.focus(); s.setSelectionRange(s.value.length, s.value.length); } return; }
+}, true);
+document.addEventListener("focusin", e => { if(e.target.dataset && e.target.dataset.add) showSugg(e.target); });
+document.addEventListener("focusout", e => { if(e.target.dataset && e.target.dataset.add) setTimeout(() => { const a = document.activeElement; if(!a || !a.dataset || !a.dataset.add) hideSugg(); }, 120); });
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-act]"); if(!b || b.tagName === "INPUT" || b.tagName === "SELECT") return;
   const act = b.dataset.act;
-  if(act === "tab"){ tab = b.dataset.c; tagFilter = null; q = ""; renderTabs(); renderList(); if(sel && sel.c !== tab) closeEditor(); return; }
+  if(act === "rec" || act === "recall"){
+    if(!sel) return;
+    const arr = getPath(draft, b.dataset.path) || [];
+    const ids = act === "rec" ? [b.dataset.v] : recTags(recSource(b.dataset.path), arr, sel.c === "enemies");
+    for(const id of ids) if(!arr.includes(id)) arr.push(id);
+    setPath(draft, b.dataset.path, arr); commit(); renderEditor(); renderList(); return;
+  }
+  if(act === "tab"){ tab = b.dataset.c; q = ""; renderTabs(); renderList(); if(sel && sel.c !== tab) closeEditor(); return; }
   if(act === "open"){ openEditor(tab, b.dataset.id); return; }
   if(act === "goto"){ tab = b.dataset.c; renderTabs(); openEditor(b.dataset.c, b.dataset.id); return; }
   if(act === "close"){ closeEditor(); return; }
-  if(act === "tagf"){ tagFilter = tagFilter === b.dataset.v ? null : b.dataset.v; renderList(); return; }
+  if(act === "findtag"){ tab = "cards"; q = `tag:"${b.dataset.v}"`; renderTabs(); closeEditor(); return; }
+  if(act === "lintgo"){ $("#sheetHost").innerHTML = ""; tab = b.dataset.c; q = ""; renderTabs(); openEditor(b.dataset.c, b.dataset.id); return; }
   if(act === "new"){
     const id = newId(tab);
     const base = {cards:{name:"새 카드", kind:"reward", cost:{energy:1}, effect:"", tags:[], note:"", upgrades:[]},
@@ -575,7 +732,7 @@ document.addEventListener("click", e => {
     const taken = draft.upgrades.map(u => u.key);
     let key = (VARIANTS.find(([k]) => !taken.includes(k)) || [])[0];
     if(!key){ let n = 1; while(taken.includes("v"+n)) n++; key = "v"+n; }
-    draft.upgrades.push({key, name:(draft.name||"") + " " + ((VARIANTS.find(v => v[0]===key)||[])[1] || key), from:"default", cost:clone(draft.cost), effect:draft.effect||"", tags:[], materials:[], note:""});
+    draft.upgrades.push({key, name:upgradeName(draft.name||"", key), from:"default", cost:clone(draft.cost), effect:draft.effect||"", tags:[...(draft.tags||[])], materials:[], note:""});
     commit(); renderEditor(); renderList();
     setTimeout(() => { const el = $("#up-"+key); if(el) el.scrollIntoView({block:"start", behavior:"smooth"}); }, 30);
     return;
@@ -591,12 +748,16 @@ let listTimer = null;
 document.addEventListener("input", e => {
   const t = e.target;
   if(t.id === "search"){ q = t.value; renderList(); return; }
+  if(t.dataset.add){ showSugg(t); return; }
   if(!sel || !t.dataset.f || t.tagName === "SELECT") return;
   let v = t.value;
   if("num" in t.dataset){ v = v === "" ? undefined : Number(v); if(t.dataset.f.includes("cost.") && !v) v = undefined; }
   setPath(draft, t.dataset.f, v);
   commit();
   if(t.dataset.f === "name"){ const h = $(".ed-head h2"); if(h) h.textContent = draft.name || sel.id; }
+  // 효과·패턴을 고치면 추천 태그를 바로 다시
+  const tp = t.dataset.f === "effect" || t.dataset.f === "pattern" ? "tags" : (t.dataset.f.match(/^(upgrades\.\d+)\.effect$/) || [])[1] ? t.dataset.f.replace(/effect$/, "tags") : null;
+  if(tp){ const r = document.getElementById("recs-" + tp); if(r) r.outerHTML = recRow(tp); }
   clearTimeout(listTimer); listTimer = setTimeout(renderList, 250);
 });
 document.addEventListener("change", e => {
@@ -605,10 +766,10 @@ document.addEventListener("change", e => {
   if(t.dataset.act === "rekey"){
     const u = draft.upgrades[+t.dataset.i], old = u.key, nu = t.value;
     for(const x of draft.upgrades) if(x.from === old) x.from = nu;
+    if((u.name||"") === upgradeName(draft.name||"", old) || !u.name) u.name = upgradeName(draft.name||"", nu); // 이름이 색 이름 그대로면 같이 바꾼다
     u.key = nu; commit(); renderEditor(); renderList(); return;
   }
   if(t.tagName === "SELECT" && t.dataset.f){ setPath(draft, t.dataset.f, t.value); commit(); renderEditor(); renderList(); return; }
-  if(t.dataset.add) addRef(t);
 });
 document.addEventListener("keydown", e => {
   const t = e.target;
@@ -618,6 +779,10 @@ document.addEventListener("keydown", e => {
 function addRef(t){
   const val = t.value; t.value = ""; if(!val.trim()) return;
   const id = findOrCreate(t.dataset.add, val); if(!id) return;
+  addRefId(t, id);
+}
+function addRefId(t, id){
+  t.value = "";
   const path = t.dataset.path, arr = getPath(draft, path) || [];
   if(t.dataset.add === "tags"){ if(!arr.includes(id)) arr.push(id); }
   else { const row = arr.find(m => m.id === id); if(row) row.count = (+row.count || 1) + 1; else arr.push({id, count:1}); }
@@ -657,12 +822,12 @@ $("#btnExport").addEventListener("click", () => {
   $("#doZip").onclick = async () => {
     const msg = $("#exMsg");
     if(!window.JSZip){ msg.textContent = "zip 라이브러리를 못 불러왔어. 전체 JSON 복사를 써."; return; }
+    if(!dl){ msg.textContent = "이 화면에서는 파일 저장이 안 돼. 전체 JSON 복사를 써."; return; }
     const zip = new JSZip(); const files = exportFiles();
     for(const p in files) zip.file(p, files[p]);
     const blob = await zip.generateAsync({type:"blob"});
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "kortfinite_cards.zip";
-    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    msg.textContent = "다운로드를 시작했어.";
+    try{ await dl.save({filename:"kortfinite_cards.zip", data:blob}); msg.textContent = "저장했어."; }
+    catch(err){ msg.textContent = err && err.code === "declined" ? "저장을 취소했어." : "저장 못 했어: " + (err && (err.code || err.message)); }
   };
   $("#doCopy").onclick = async () => {
     const text = exportFiles()["data.json"];
@@ -671,31 +836,82 @@ $("#btnExport").addEventListener("click", () => {
   };
 });
 
+// 점검 종류 (중요한 순). 재료는 아직 안 정했을 수 있어서 처음엔 꺼 둔다
+const LINT_KINDS = [["없음", true], ["효과", true], ["태그", true], ["추천", true], ["안 씀", true], ["재료", false]];
+let lintOn = null;
+function renderLint(){
+  const list = lint();
+  if(!lintOn){ lintOn = {}; try{ lintOn = JSON.parse(localStorage.getItem("ws-lint") || "{}"); }catch(e){} for(const [k, on] of LINT_KINDS) if(!(k in lintOn)) lintOn[k] = on; }
+  const count = (k) => list.filter(x => x.k === k).length;
+  const shown = list.filter(x => lintOn[x.k]).sort((a, b) => LINT_KINDS.findIndex(([k]) => k === a.k) - LINT_KINDS.findIndex(([k]) => k === b.k));
+  sheet(`<h3>점검 ${shown.length}건</h3>
+    <p>비었거나 빠뜨린 것, 추천 태그를 모아 봤어. 누르면 그 항목으로 간다.</p>
+    <div class="lintf">${LINT_KINDS.map(([k]) => `<button type="button" class="chip" data-lintk="${k}" aria-pressed="${!!lintOn[k]}">${k} ${count(k)}</button>`).join("")}</div>
+    <div class="lint">${shown.map(x => `<button type="button" class="use" data-act="lintgo" data-c="${x.c}" data-id="${esc(x.id)}"><span class="k">${esc(x.k)}</span><span class="sp">${esc(x.text)}</span></button>`).join("") || `<p>깔끔해.</p>`}</div>
+    <div class="acts"><button class="btn" type="button" data-sheet-close>닫기</button></div>`);
+}
+$("#btnLint").addEventListener("click", renderLint);
+document.addEventListener("click", e => {
+  const k = e.target.closest("[data-lintk]");
+  if(!k) return;
+  lintOn[k.dataset.lintk] = !lintOn[k.dataset.lintk];
+  try{ localStorage.setItem("ws-lint", JSON.stringify(lintOn)); }catch(err){}
+  renderLint();
+});
+
 $("#btnImport").addEventListener("click", () => {
   sheet(`<h3>가져오기</h3>
-    <p>내보낸 zip, <span class="mono">data.json</span>, 또는 <span class="mono">cards/</span> 폴더가 든 zip을 고르면 돼. 같은 id는 덮어쓰고 나머지는 그대로 둬.</p>
-    <div class="acts"><button class="btn primary" type="button" id="pick">파일 고르기</button>
+    <p>파일(zip · json · txt)을 고르거나, JSON 글을 아래 칸에 붙여 넣어. 같은 id는 덮어쓰고 나머지는 그대로 둬.</p>
+    <div class="acts"><button class="btn primary" type="button" id="pick">파일 고르기</button></div>
+    <textarea id="imText" placeholder='{"cards": [...], "materials": [...], "enemies": [...], "tags": [...]}  또는 카드 하나 {"id": "...", ...}'></textarea>
+    <div class="acts"><button class="btn primary" type="button" id="imPaste">붙여 넣은 JSON 가져오기</button>
       <button class="btn" type="button" data-sheet-close>닫기</button></div>
     <p id="imMsg"></p>`);
   $("#pick").onclick = () => $("#fileIn").click();
+  $("#imPaste").onclick = () => {
+    const msg = $("#imMsg");
+    try{ const n = importText($("#imText").value); afterImport(n); }
+    catch(err){ msg.textContent = "못 읽었어: " + err.message; }
+  };
 });
+// JSON 글 읽기: 앞뒤 공백·BOM·```json 코드 울타리는 벗긴다
+function parseJSON(text){
+  let t = String(text || "").replace(/^\uFEFF/, "").trim();
+  t = t.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+  if(!t) throw new Error("비어 있다");
+  return JSON.parse(t);
+}
+function importText(text){ return importAny(parseJSON(text)); }
+// 전체 백업 { cards, materials, enemies, tags } 중 일부만 있어도 되고, 카드 하나({ id, effect … })나 카드 배열도 된다
+function importAny(o){
+  if(Array.isArray(o)) o = { cards: o };
+  // id가 있으면 한 항목 (카드에도 tags 배열이 있어서 목록 여부로는 못 가른다)
+  if(o && typeof o === "object" && typeof o.id === "string"){
+    const c = o.drops || o.pattern !== undefined ? "enemies" : o.effect !== undefined || o.upgrades ? "cards" : o.color ? "tags" : "materials";
+    o = { [c]: [o] };
+  } else if(!o || typeof o !== "object" || !Object.keys(COLS).some(c => Array.isArray(o[c])))
+    throw new Error("cards·materials·enemies·tags 목록이나 id가 있는 항목이 아니다");
+  return importBackup(o);
+}
+function afterImport(n){
+  renderTabs(); renderList(); if(sel){ draft = clone(S[sel.c][sel.id] || {}); renderEditor(); }
+  const msg = $("#imMsg"); if(msg) msg.textContent = `${n}개 항목을 불러왔어.`;
+}
 $("#fileIn").addEventListener("change", async e => {
   const file = e.target.files[0]; e.target.value = ""; if(!file) return;
   const msg = $("#imMsg");
   try{
     let n;
-    if(/\.zip$/i.test(file.name)){
+    const head = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+    const isZip = /\.zip$/i.test(file.name) || (head[0] === 0x50 && head[1] === 0x4b); // "PK"
+    if(isZip){
       if(!window.JSZip) throw new Error("zip 라이브러리 없음");
       const zip = await JSZip.loadAsync(file);
       const files = {};
       for(const p in zip.files) if(!zip.files[p].dir && p.endsWith(".json")) files[p.replace(/^.*?(cards\/|materials\.json|enemies\.json|tags\.json|data\.json)/, "$1")] = JSON.parse(await zip.files[p].async("string"));
       n = files["data.json"] ? importBackup(files["data.json"]) : importFolders(files);
-    } else {
-      const o = JSON.parse(await file.text());
-      n = importBackup(o);
-    }
-    renderTabs(); renderList(); if(sel){ draft = clone(S[sel.c][sel.id] || {}); renderEditor(); }
-    if(msg) msg.textContent = `${n}개 항목을 불러왔어.`;
+    } else n = importText(await file.text()); // .json · .txt · 확장자 없는 파일도 글로 읽는다
+    afterImport(n);
   }catch(err){ if(msg) msg.textContent = "못 읽었어: " + err.message; }
 });
 function strip(o){ const r = clone(o); delete r.id; return r; }
@@ -724,30 +940,16 @@ function importFolders(files){
 }
 
 /* ---------- 시작 ---------- */
-function login(){
-  const p = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(p).catch(e => {
-    if(/popup-blocked|operation-not-supported|popup-closed-by-user|cancelled-popup/.test(e.code || "")){ if(e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment") auth.signInWithRedirect(p); }
-    else setStatus("로그인 실패: " + (e.code || e.message));
-  });
-}
-function init(){
+async function init(){
   renderTabs(); renderList(); renderEditor();
-  if(!window.firebase){ setStatus("Firebase를 못 불러왔어"); return; }
-  firebase.initializeApp(FB_CONFIG);
-  auth = firebase.auth(); rdb = firebase.database();
-  auth.getRedirectResult().catch(e => setStatus("로그인 실패: " + (e.code || e.message)));
-  $("#btnAuth").onclick = () => user ? auth.signOut() : login();
-  auth.onAuthStateChanged(u => {
-    user = u;
-    $("#who").textContent = u ? (u.email || "") : "";
-    $("#btnAuth").textContent = u ? "로그아웃" : "로그인";
-    if(u){ mode = "wait"; setStatus("연결하는 중…"); subscribe(); }
-    else { unsubscribe(); for(const c in COLS) S[c] = {}; mode = "signedout"; setStatus("로그인 필요"); closeEditor(); renderTabs(); }
-    renderList();
-  });
+  if(window.claude && window.claude.use){
+    try{ db = await window.claude.use("db"); }catch(e){ db = null; }
+    try{ dl = await window.claude.use("downloads"); }catch(e){ dl = null; }
+  }
+  if(db){ subscribe(); setTimeout(() => { if(mode === "wait"){ mode = "db"; renderList(); setStatus("저장됨"); } }, 4000); }
+  else { mode = "local"; lsLoad(); setStatus("이 기기에만 저장 중"); renderTabs(); renderList(); }
 }
 init();
 </script>
-</body>
-</html>
+
+</body></html>
