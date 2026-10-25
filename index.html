@@ -1,9 +1,15 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Kortfinite 카드 공방</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
 /* Layout: 장부 형태. 왼쪽 목록, 오른쪽 편집기 (폰에서는 편집기가 화면을 덮는다). 비용 색은 게임 자원색 그대로 */
 :root{
@@ -31,8 +37,11 @@
   --t-slate:#97a1ac; --t-red:#ec6b6b; --t-amber:#e8ad3a; --t-green:#5cc48a; --t-teal:#4cc2b8; --t-blue:#6aa1f0; --t-violet:#a989e6; --t-pink:#e87bb0;
   --warn:#f08a5d; color-scheme:dark}
 
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;display:flex;flex-direction:column}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;display:flex;flex-direction:column}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -167,13 +176,22 @@ section.blk>h3 .sp{flex:1}
 .sheet .acts{display:flex;flex-wrap:wrap;gap:8px}
 .sheet textarea{width:100%;min-height:140px;font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:8px}
 @media (prefers-reduced-motion:no-preference){.row,.btn,.chip{transition:background-color .12s,border-color .12s}}
+.who{font-size:12px;color:var(--muted);max-width:14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gate{max-width:44ch;display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:28px 4px;color:var(--muted);line-height:1.7}
+.login{display:flex;flex-direction:column;gap:8px;width:100%;max-width:320px}
+.login input{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 10px;width:100%}
+.gate code{font-family:var(--f-mono);font-size:12px;background:var(--sunk);padding:1px 5px;border-radius:4px;color:var(--ink);word-break:break-all}
 </style>
+</head>
+<body>
 
 <header>
   <div class="top">
     <h1>카드 공방<small>Kortfinite</small></h1>
     <span id="status">불러오는 중…</span>
     <button class="btn" id="btnLint" type="button">점검</button>
+    <span class="who" id="who"></span>
+    <button class="btn" id="btnAuth" type="button">로그인</button>
     <button class="btn" id="btnImport" type="button">가져오기</button>
     <button class="btn primary" id="btnExport" type="button">내보내기</button>
     <input type="file" id="fileIn" accept=".zip,.json,.txt,application/zip,application/json,text/plain,application/octet-stream" hidden>
@@ -198,7 +216,7 @@ const ID_RE = /^[a-z0-9_]+$/;
 
 const S = {cards:{}, materials:{}, enemies:{}, tags:{}};
 let tab = "cards", sel = null, q = "", tagFilter = null, draft = null;
-let db = null, dl = null, mode = "wait";
+let mode = "wait";
 
 const $ = (s, r=document) => r.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -206,50 +224,60 @@ const clone = o => JSON.parse(JSON.stringify(o ?? {}));
 const sortIds = c => Object.keys(S[c]).sort((a,b) => (S[c][a].name||a).localeCompare(S[c][b].name||b, "ko"));
 function setStatus(t){ $("#status").textContent = t; }
 
-/* ---------- 저장 ---------- */
-const LS = "kortfinite-workshop-v1";
-function lsLoad(){ try{ const o = JSON.parse(localStorage.getItem(LS) || "null"); if(o) for(const c in COLS) S[c] = o[c] || {}; }catch(e){} }
-function lsSave(){ try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){} }
-
-const pending = new Map(); let inflight = null, busy = false, qtimer = null;
+/* ---------- 저장 (Firebase Realtime Database) ---------- */
+const FB_CONFIG = {
+  apiKey: "AIzaSyB5S27pJjTTtSzXUsCLNbBQPcb_P1m7Eso",
+  authDomain: "kortfinite-drhoondo.firebaseapp.com",
+  databaseURL: "https://kortfinite-drhoondo-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "kortfinite-drhoondo",
+  storageBucket: "kortfinite-drhoondo.firebasestorage.app",
+  messagingSenderId: "877620571174",
+  appId: "1:877620571174:web:e4c5de11366c19012dcae7"
+};
+const ROOT = "workshop";
+let user = null, rdb = null, auth = null, listeners = [], loaded = {};
+const pending = new Map(); let qtimer = null;
+const arr = v => Array.isArray(v) ? v.filter(x => x != null) : (v && typeof v === "object" ? Object.values(v) : []);
+function norm(c, d){
+  d = clone(d);
+  if(c === "cards"){ d.cost = d.cost || {}; d.tags = arr(d.tags); d.upgrades = arr(d.upgrades).map(u => ({...u, cost:u.cost||{}, tags:arr(u.tags), materials:arr(u.materials)})); }
+  if(c === "enemies"){ d.tags = arr(d.tags); d.drops = arr(d.drops); }
+  return d;
+}
 function put(c, id, data){
   if(data === null) delete S[c][id]; else S[c][id] = data;
-  if(db){ pending.set(c+"/"+id, {c, id, data}); clearTimeout(qtimer); qtimer = setTimeout(pump, 450); setStatus("저장 대기…"); }
-  else { lsSave(); setStatus("이 기기에 저장됨"); }
+  if(!user){ setStatus("로그인해야 저장돼"); return; }
+  pending.set(c+"/"+id, {c, id, data}); clearTimeout(qtimer); qtimer = setTimeout(flush, 400); setStatus("저장 대기…");
 }
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-async function pump(){
-  if(busy) return; busy = true;
-  while(pending.size){
-    const [k, p] = pending.entries().next().value; pending.delete(k); inflight = k;
-    setStatus("저장 중… " + (pending.size ? "(" + (pending.size+1) + ")" : ""));
-    try{
-      const ref = db.collection(p.c).doc(p.id);
-      if(p.data === null) await ref.delete(); else await ref.set(p.data);
-    }catch(e){
-      if(e && (e.code === "unavailable" || e.code === "resource_exhausted")){ await sleep(1200 + Math.random()*1200); if(!pending.has(k)) pending.set(k, p); }
-      else { setStatus("저장 실패: " + (e && (e.code || e.message))); }
-    }
-    inflight = null;
-  }
-  busy = false; setStatus("저장됨");
+async function flush(){
+  if(!pending.size) return;
+  const upd = {};
+  for(const [k, p] of pending) upd[k] = p.data === null ? null : clone(p.data);
+  pending.clear(); setStatus("저장 중…");
+  try{ await rdb.ref(ROOT).update(upd); if(!pending.size) setStatus("저장됨"); }
+  catch(e){ setStatus("저장 실패: " + (e.code || e.message)); if(/permission/i.test(e.code || e.message)) showPerm(); }
 }
 function subscribe(){
+  unsubscribe();
   for(const c in COLS){
-    db.collection(c).limit(1000).onSnapshot(snap => {
-      const next = {};
-      for(const d of snap.docs){
-        const k = c+"/"+d.id;
-        next[d.id] = (pending.has(k) || inflight === k) && S[c][d.id] ? S[c][d.id] : clone(d.data());
-      }
+    const ref = rdb.ref(ROOT + "/" + c);
+    const fn = ref.on("value", snap => {
+      const v = snap.val() || {}, next = {};
+      for(const id in v) next[id] = pending.has(c+"/"+id) && S[c][id] ? S[c][id] : norm(c, v[id]);
       for(const [k, p] of pending){ if(p.c !== c) continue; if(p.data === null) delete next[p.id]; else next[p.id] = S[c][p.id]; }
-      S[c] = next;
-      if(mode !== "db"){ mode = "db"; setStatus("저장됨"); }
+      S[c] = next; loaded[c] = true;
+      if(mode !== "db" && Object.keys(COLS).every(k => loaded[k])){ mode = "db"; setStatus("연결됨"); }
       renderTabs(); renderList();
-      if(sel && sel.c === c && !S[c][sel.id]){ closeEditor(); }
-      else if(sel && sel.c !== tab) {}
-    }, e => setStatus("동기화 끊김: " + (e && e.code)));
+      if(sel && sel.c === c && !S[c][sel.id]) closeEditor();
+    }, err => { setStatus("읽기 거부됨"); mode = "denied"; renderList(); });
+    listeners.push(() => ref.off("value", fn));
   }
+}
+function unsubscribe(){ listeners.forEach(f => f()); listeners = []; loaded = {}; }
+function showPerm(){
+  sheet(`<h3>저장 권한이 없어</h3>
+    <p>Firebase 콘솔 → Realtime Database → 규칙에서 이 계정을 허용해야 해. 지금 로그인한 계정은 <span class="mono">${esc(user && user.email)}</span>야.</p>
+    <div class="acts"><button class="btn" type="button" data-sheet-close>닫기</button></div>`);
 }
 
 /* ---------- 조회 ---------- */
@@ -333,7 +361,20 @@ function rowMeta(c, id){
 }
 function renderList(){
   const el = $("#list");
-  if(mode === "wait"){ el.innerHTML = `<p class="empty">저장소에 연결하는 중…</p>`; return; }
+  if(mode === "wait"){ el.innerHTML = `<p class="empty">연결하는 중…</p>`; return; }
+  if(mode === "signedout"){
+    el.innerHTML = `<div class="gate"><b style="color:var(--ink)">로그인해야 써.</b>
+      <span>데이터는 Firebase에 저장돼서, 폰이든 PC든 같은 계정으로 들어오면 같은 내용이 보여.</span>
+      ${WEB ? `<button class="btn primary" type="button" id="gateGoogle">구글로 로그인</button><span class="hint">또는 이메일로</span>` : `<span class="hint">파일로 연 상태라 이메일 로그인만 돼.</span>`}
+      <form id="gateForm" class="login">
+        <input id="lgEmail" type="email" autocomplete="username" placeholder="이메일" required>
+        <input id="lgPw" type="password" autocomplete="current-password" placeholder="비밀번호" required>
+        <button class="btn ${WEB ? "" : "primary"}" type="submit">이메일로 로그인</button>
+      </form><span class="hint warn" id="lgMsg"></span></div>`;
+    if(WEB) $("#gateGoogle").onclick = loginGoogle;
+    $("#gateForm").onsubmit = loginEmail;
+    return; }
+  if(mode === "denied"){ el.innerHTML = `<div class="gate"><b style="color:var(--ink)">이 계정은 아직 허용 안 됐어.</b><span>Firebase 콘솔 → Realtime Database → 규칙에 이 메일을 넣어:</span><code>${esc(user && user.email)}</code><button class="btn" type="button" id="gateOut">다른 계정으로</button></div>`; $("#gateOut").onclick = () => auth.signOut(); return; }
   const ids = sortIds(tab).filter(id => matches(tab, id));
   const hint = tab === "cards" ? `예) <code data-q='tag:"공격"'>tag:"공격"</code> <code data-q="-tag:이동">-tag:이동</code> <code data-q="kind:보상">kind:보상</code> <code data-q="has:강화">has:강화</code> <code data-q="no:태그">no:태그</code>`
     : tab === "enemies" ? `예) <code data-q='tag:"독"'>tag:"독"</code> <code data-q="no:재료">no:재료</code>` : "";
@@ -822,12 +863,12 @@ $("#btnExport").addEventListener("click", () => {
   $("#doZip").onclick = async () => {
     const msg = $("#exMsg");
     if(!window.JSZip){ msg.textContent = "zip 라이브러리를 못 불러왔어. 전체 JSON 복사를 써."; return; }
-    if(!dl){ msg.textContent = "이 화면에서는 파일 저장이 안 돼. 전체 JSON 복사를 써."; return; }
     const zip = new JSZip(); const files = exportFiles();
     for(const p in files) zip.file(p, files[p]);
     const blob = await zip.generateAsync({type:"blob"});
-    try{ await dl.save({filename:"kortfinite_cards.zip", data:blob}); msg.textContent = "저장했어."; }
-    catch(err){ msg.textContent = err && err.code === "declined" ? "저장을 취소했어." : "저장 못 했어: " + (err && (err.code || err.message)); }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "kortfinite_cards.zip";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    msg.textContent = "다운로드를 시작했어.";
   };
   $("#doCopy").onclick = async () => {
     const text = exportFiles()["data.json"];
@@ -940,16 +981,40 @@ function importFolders(files){
 }
 
 /* ---------- 시작 ---------- */
-async function init(){
+const WEB = /^https?:$/.test(location.protocol);
+const AUTH_MSG = {"auth/invalid-credential":"이메일이나 비밀번호가 틀렸어.","auth/wrong-password":"비밀번호가 틀렸어.","auth/user-not-found":"그 이메일 계정이 없어. 콘솔 사용자 탭에서 먼저 만들어.","auth/invalid-email":"이메일 형식이 이상해.","auth/too-many-requests":"너무 많이 틀렸어. 잠깐 있다 다시 해.","auth/network-request-failed":"인터넷 연결을 확인해.","auth/unauthorized-domain":"이 주소가 Firebase 승인된 도메인에 없어.","auth/operation-not-allowed":"콘솔에서 이 로그인 방식을 안 켰어."};
+const authErr = e => AUTH_MSG[e && e.code] || ("로그인 실패: " + (e && (e.code || e.message)));
+function loginGoogle(){
+  const p = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(p).catch(e => {
+    if(e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment") return auth.signInWithRedirect(p);
+    if(e.code === "auth/popup-closed-by-user" || e.code === "auth/cancelled-popup-request") return;
+    const m = $("#lgMsg"); if(m) m.textContent = authErr(e);
+  });
+}
+function loginEmail(ev){
+  ev.preventDefault();
+  const m = $("#lgMsg"); m.textContent = "로그인 중…";
+  auth.signInWithEmailAndPassword($("#lgEmail").value.trim(), $("#lgPw").value)
+    .then(() => {}).catch(e => { m.textContent = authErr(e); });
+}
+function init(){
   renderTabs(); renderList(); renderEditor();
-  if(window.claude && window.claude.use){
-    try{ db = await window.claude.use("db"); }catch(e){ db = null; }
-    try{ dl = await window.claude.use("downloads"); }catch(e){ dl = null; }
-  }
-  if(db){ subscribe(); setTimeout(() => { if(mode === "wait"){ mode = "db"; renderList(); setStatus("저장됨"); } }, 4000); }
-  else { mode = "local"; lsLoad(); setStatus("이 기기에만 저장 중"); renderTabs(); renderList(); }
+  if(!window.firebase){ setStatus("Firebase를 못 불러왔어"); return; }
+  firebase.initializeApp(FB_CONFIG);
+  auth = firebase.auth(); rdb = firebase.database();
+  if(WEB) auth.getRedirectResult().catch(e => setStatus(authErr(e)));
+  $("#btnAuth").onclick = () => { if(user) auth.signOut(); else { closeEditor(); const f = $("#lgEmail"); if(f) f.focus(); } };
+  auth.onAuthStateChanged(u => {
+    user = u;
+    $("#who").textContent = u ? (u.email || "") : "";
+    $("#btnAuth").textContent = u ? "로그아웃" : "로그인";
+    if(u){ mode = "wait"; setStatus("연결하는 중…"); subscribe(); }
+    else { unsubscribe(); for(const c in COLS) S[c] = {}; mode = "signedout"; setStatus("로그인 필요"); closeEditor(); renderTabs(); }
+    renderList();
+  });
 }
 init();
 </script>
-
-</body></html>
+</body>
+</html>
