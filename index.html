@@ -17,7 +17,7 @@
   --ink:#1b2129; --muted:#5d6773; --accent:#2e5d8a; --accent-ink:#ffffff;
   --energy:#c98a12; --mana:#2f6fd0; --hp:#c63d3d; --gold:#a57a10;
   --v-red:#c63d3d; --v-blue:#2f6fd0; --v-yellow:#c3a114; --v-green:#2f8f57; --v-purple:#7a4fc0; --v-default:#5d6773;
-  --t-slate:#5d6773; --t-red:#c63d3d; --t-amber:#c98a12; --t-green:#2f8f57; --t-teal:#13817a; --t-blue:#2f6fd0; --t-violet:#7a4fc0; --t-pink:#c2457f;
+  --t-slate:#5d6773; --t-red:#c63d3d; --t-amber:#c98a12; --t-green:#2f8f57; --t-teal:#13817a; --t-blue:#2f6fd0; --t-violet:#7a4fc0; --t-pink:#c2457f; --t-orange:#d0641c; --t-lime:#6b9a1c; --t-sky:#1f8fc4; --t-indigo:#4f5bd0; --t-brown:#8a5a3a; --t-rose:#d0405a; --t-olive:#8a8a2a; --t-gray:#8a8f96;
   --warn:#b4401b;
   --f-body:"IBM Plex Sans KR",system-ui,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
@@ -27,14 +27,14 @@
   --ink:#e4e8ec; --muted:#97a1ac; --accent:#7fb0e0; --accent-ink:#0f1720;
   --energy:#e8ad3a; --mana:#6aa1f0; --hp:#ec6b6b; --gold:#d8b14a;
   --v-red:#ec6b6b; --v-blue:#6aa1f0; --v-yellow:#e2c54a; --v-green:#5cc48a; --v-purple:#a989e6; --v-default:#97a1ac;
-  --t-slate:#97a1ac; --t-red:#ec6b6b; --t-amber:#e8ad3a; --t-green:#5cc48a; --t-teal:#4cc2b8; --t-blue:#6aa1f0; --t-violet:#a989e6; --t-pink:#e87bb0;
+  --t-slate:#97a1ac; --t-red:#ec6b6b; --t-amber:#e8ad3a; --t-green:#5cc48a; --t-teal:#4cc2b8; --t-blue:#6aa1f0; --t-violet:#a989e6; --t-pink:#e87bb0; --t-orange:#f09255; --t-lime:#a3cf4f; --t-sky:#5cbcec; --t-indigo:#8a93f0; --t-brown:#c49066; --t-rose:#f27a90; --t-olive:#c5c45a; --t-gray:#b9bec5;
   --warn:#f08a5d; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#14181d; --surface:#1c2128; --sunk:#252b33; --line:#343c46;
   --ink:#e4e8ec; --muted:#97a1ac; --accent:#7fb0e0; --accent-ink:#0f1720;
   --energy:#e8ad3a; --mana:#6aa1f0; --hp:#ec6b6b; --gold:#d8b14a;
   --v-red:#ec6b6b; --v-blue:#6aa1f0; --v-yellow:#e2c54a; --v-green:#5cc48a; --v-purple:#a989e6; --v-default:#97a1ac;
-  --t-slate:#97a1ac; --t-red:#ec6b6b; --t-amber:#e8ad3a; --t-green:#5cc48a; --t-teal:#4cc2b8; --t-blue:#6aa1f0; --t-violet:#a989e6; --t-pink:#e87bb0;
+  --t-slate:#97a1ac; --t-red:#ec6b6b; --t-amber:#e8ad3a; --t-green:#5cc48a; --t-teal:#4cc2b8; --t-blue:#6aa1f0; --t-violet:#a989e6; --t-pink:#e87bb0; --t-orange:#f09255; --t-lime:#a3cf4f; --t-sky:#5cbcec; --t-indigo:#8a93f0; --t-brown:#c49066; --t-rose:#f27a90; --t-olive:#c5c45a; --t-gray:#b9bec5;
   --warn:#f08a5d; color-scheme:dark}
 
 *,*::before,*::after{box-sizing:border-box}
@@ -109,6 +109,15 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr)}
 .chip.off{opacity:.45}
 .chip.missing{color:var(--warn);border-style:dashed}
 .chip.link{cursor:pointer}
+.chip.memo{color:var(--muted);border-style:dotted}
+.chip.memo small{font-size:10px;opacity:.7}
+.chip.fold,.chip.fold-on{color:var(--accent)}
+.chip.fold{border-color:transparent;padding:0 2px}
+.chip.self{border-style:double;font-weight:600}
+.chip.self small{font-weight:400;opacity:.7}
+.chip .mlink{border:0;background:none;padding:0;font:inherit;color:inherit;opacity:1}
+.recs .lab2{font-weight:600;color:var(--muted)}
+.theme-grid{display:flex;flex-direction:column;gap:12px}
 
 .ed-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .ed-head h2{margin:0;font-size:20px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -206,16 +215,17 @@ section.blk>h3 .sp{flex:1}
 
 <script>
 "use strict";
-const COLS = {cards:"카드", materials:"재료", enemies:"적", tags:"태그"};
-const PREFIX = {cards:"card", materials:"mat", enemies:"enemy", tags:"tag"};
+const COLS = {cards:"카드", materials:"재료", enemies:"적", tags:"태그", folders:"폴더"};
+const PREFIX = {cards:"card", materials:"mat", enemies:"enemy", tags:"tag", folders:"folder"};
+const ITEMC = ["cards", "enemies", "materials", "tags"]; // 폴더에 담을 수 있는 것들
 const COST = [["energy","기력"],["mana","마나"],["hp","체력"],["gold","골드"]];
 const KINDS = [["basic","기본"],["reward","보상"],["special","특수"]];
 const VARIANTS = [["red","빨강","붉은"],["blue","파랑","푸른"],["yellow","노랑","노란"],["green","초록","초록"],["purple","보라","보랏빛"]];
-const TAGCOLORS = ["slate","red","amber","green","teal","blue","violet","pink"];
+const TAGCOLORS = ["slate","gray","red","rose","orange","amber","olive","lime","green","teal","sky","blue","indigo","violet","pink","brown"];
 const ID_RE = /^[a-z0-9_]+$/;
 
-const S = {cards:{}, materials:{}, enemies:{}, tags:{}};
-let tab = "cards", sel = null, q = "", tagFilter = null, draft = null;
+const S = {cards:{}, materials:{}, enemies:{}, tags:{}, folders:{}};
+let tab = "cards", sel = null, q = "", tagFilter = null, draft = null, themeOpen = {};
 let mode = "wait";
 
 const $ = (s, r=document) => r.querySelector(s);
@@ -239,9 +249,11 @@ let user = null, rdb = null, auth = null, listeners = [], loaded = {};
 const pending = new Map(); let qtimer = null;
 const arr = v => Array.isArray(v) ? v.filter(x => x != null) : (v && typeof v === "object" ? Object.values(v) : []);
 function norm(c, d){
-  d = clone(d);
+  d = clone(d); d.memo = arr(d.memo);
   if(c === "cards"){ d.cost = d.cost || {}; d.tags = arr(d.tags); d.upgrades = arr(d.upgrades).map(u => ({...u, cost:u.cost||{}, tags:arr(u.tags), materials:arr(u.materials)})); }
   if(c === "enemies"){ d.tags = arr(d.tags); d.drops = arr(d.drops); }
+  if(c === "tags"){ d.tags = arr(d.tags); }
+  if(c === "folders"){ d.items = arr(d.items); d.parent = d.parent || ""; }
   return d;
 }
 function put(c, id, data){
@@ -308,14 +320,148 @@ function tagUses(tid){
 }
 function newId(c){ let n = 1; while(S[c][PREFIX[c]+"_"+n]) n++; return PREFIX[c]+"_"+n; }
 
+/* ---------- 태그의 태그 (테마·연관) ---------- */
+// 태그 d.tags = 그 태그에 달린 태그(속한 테마나 연관 태그). 자기 자신은 항상 들어 있다. 위로 올라가며 이어진다 (순환은 막는다).
+const L = v => Array.isArray(v) ? v : [];
+const selfTags = (id, list) => [id, ...L(list).filter(x => x !== id)];
+const attached = id => L((S.tags[id] || {}).tags).filter(x => x !== id);       // 자기 자신 뺀 달린 태그
+function tagClosure(id, seen = new Set()){                                      // 자기 + 올라가며 달린 모든 태그
+  if(seen.has(id)) return seen;
+  seen.add(id);
+  for(const t of attached(id)) tagClosure(t, seen);
+  return seen;
+}
+function expandTags(ids){ const s = new Set(); for(const id of ids) tagClosure(id, s); return s; }
+const members = tid => Object.keys(S.tags).filter(id => id !== tid && attached(id).includes(tid)); // 이 태그가 달린 태그
+const themes = () => Object.keys(S.tags).filter(id => members(id).length);                           // 구성원이 있는 태그
+function tagIdsOf(c, id, d){
+  if(c === "cards") return allTags(d);
+  if(c === "enemies") return L(d.tags);
+  if(c === "tags") return [id, ...attached(id)];
+  return [];
+}
+// 같은 테마에 든 정도(theme)와 같은 카드·적에 같이 붙은 횟수(co)로 연관 태그 순위
+function relatedTo(tid){
+  const mine = new Set([...tagClosure(tid)].filter(x => x !== tid));
+  const out = {};
+  const bump = (id, k, n = 1) => { if(id === tid || !S.tags[id]) return; (out[id] = out[id] || {theme:0, co:0})[k] += n; };
+  for(const id of Object.keys(S.tags)){
+    if(id === tid) continue;
+    let shared = 0;
+    for(const t of tagClosure(id)) if(t !== id && mine.has(t)) shared++;
+    if(shared) bump(id, "theme", shared);
+  }
+  for(const c of ["cards", "enemies"]) for(const id in S[c]){
+    const d = S[c][id];
+    const groups = c === "cards" ? [L(d.tags), ...L(d.upgrades).map(u => L(u.tags))] : [L(d.tags)];
+    for(const g of groups) if(g.includes(tid)) for(const o of g) bump(o, "co");
+  }
+  return Object.entries(out).map(([id, v]) => ({id, ...v, score: v.theme * 3 + v.co})).sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+}
+// 이미 붙은 태그와 같은 테마에 든 태그 (겹치는 테마가 많을수록 위)
+function fitTags(have){
+  const ex = new Set(have || []), score = {};
+  for(const h of ex){
+    if(!S.tags[h]) continue;
+    for(const th of tagClosure(h)){
+      if(th === h) continue;
+      for(const m of members(th)) if(!ex.has(m)) score[m] = (score[m] || 0) + 1;
+    }
+  }
+  return Object.keys(score).sort((a, b) => score[b] - score[a] || (S.tags[a].name || a).localeCompare(S.tags[b].name || b, "ko")).slice(0, 8);
+}
+
+/* ---------- 폴더 ---------- */
+const parentOf = fid => (S.folders[fid] || {}).parent || "";
+function folderDesc(fid){                                                       // fid와 그 아래 모든 폴더
+  const out = new Set([fid]);
+  for(let grew = true; grew;){ grew = false; for(const f in S.folders) if(!out.has(f) && out.has(parentOf(f))){ out.add(f); grew = true; } }
+  return out;
+}
+function folderPath(fid){
+  const names = [], seen = new Set();
+  for(let f = fid; f && S.folders[f] && !seen.has(f); f = parentOf(f)){ seen.add(f); names.unshift(S.folders[f].name || f); }
+  return names.join(" / ");
+}
+const foldersOf = (c, id) => Object.keys(S.folders).filter(f => L(S.folders[f].items).some(x => x.c === c && x.id === id));
+function folderIdsFor(val){
+  const v = val.toLowerCase();
+  return Object.keys(S.folders).filter(f => f.toLowerCase() === v || (S.folders[f].name || "").toLowerCase() === v || folderPath(f).toLowerCase() === v);
+}
+function inFolder(c, id, val){
+  const roots = folderIdsFor(val);
+  if(!roots.length) return false;
+  const all = new Set();
+  roots.forEach(r => folderDesc(r).forEach(x => all.add(x)));
+  if(c === "folders") return all.has(id) && !roots.includes(id);
+  return foldersOf(c, id).some(f => all.has(f));
+}
+function folderOrder(){                                                         // 트리 순서 [{id, depth}]
+  const byName = (a, b) => (S.folders[a].name || a).localeCompare(S.folders[b].name || b, "ko");
+  const out = [], seen = new Set();
+  const walk = (p, depth) => {
+    for(const f of Object.keys(S.folders).filter(f => (S.folders[f].parent || "") === p).sort(byName)){
+      if(seen.has(f)) continue;
+      seen.add(f); out.push({id:f, depth}); walk(f, depth + 1);
+    }
+  };
+  walk("", 0);
+  for(const f of Object.keys(S.folders).sort(byName)) if(!seen.has(f)){ seen.add(f); out.push({id:f, depth:0}); walk(f, 1); } // 부모가 사라진 폴더
+  return out;
+}
+const itemKeys = () => ITEMC.flatMap(c => Object.keys(S[c]).map(id => c + "/" + id));
+const itemLabel = k => { const i = k.indexOf("/"), c = k.slice(0, i), id = k.slice(i + 1); return (S[c] && S[c][id] && S[c][id].name) || id; };
+function itemCandidates(v, cur){
+  const have = new Set(L(cur).map(x => x.c + "/" + x.id));
+  return itemKeys().filter(k => !have.has(k) && (!v || k.toLowerCase().includes(v) || itemLabel(k).toLowerCase().includes(v)))
+    .sort((a, b) => ITEMC.indexOf(a.split("/")[0]) - ITEMC.indexOf(b.split("/")[0]) || itemLabel(a).localeCompare(itemLabel(b), "ko"));
+}
+function addToFolder(fid, items){
+  const f = S.folders[fid]; if(!f) return 0;
+  f.items = L(f.items);
+  let n = 0;
+  for(const it of items) if(!f.items.some(x => x.c === it.c && x.id === it.id)){ f.items.push({c:it.c, id:it.id}); n++; }
+  if(n) put("folders", fid, f);
+  return n;
+}
+function attachTag(child, parentTag){
+  const d = S.tags[child]; if(!d || child === parentTag) return;
+  if(!L(d.tags).includes(parentTag)){ d.tags = selfTags(child, [...L(d.tags), parentTag]); put("tags", child, d); }
+}
+// 지울 때 남는 참조 정리: 폴더에서 빼고, 다른 태그에 달린 것 떼고, 하위 폴더는 위로 올린다
+function purgeRefs(c, id){
+  for(const f in S.folders){
+    const d = S.folders[f], n = L(d.items).filter(x => !(x.c === c && x.id === id));
+    if(n.length !== L(d.items).length){ d.items = n; put("folders", f, d); }
+  }
+  if(c === "tags") for(const t in S.tags){
+    const d = S.tags[t];
+    if(L(d.tags).includes(id)){ d.tags = d.tags.filter(x => x !== id); put("tags", t, d); }
+  }
+  if(c === "folders"){
+    const p = parentOf(id);
+    for(const f in S.folders) if(S.folders[f].parent === id){ S.folders[f].parent = p; put("folders", f, S.folders[f]); }
+  }
+}
+const memoCounts = () => { const n = {}; for(const c of ITEMC) for(const id in S[c]) for(const m of L(S[c][id].memo)) n[m] = (n[m] || 0) + 1; return n; };
+function memoChip(m, removable){
+  if(!removable) return `<span class="chip memo">#${esc(m)}</span>`;
+  return `<span class="chip memo"><button type="button" class="mlink" data-act="findmemo" data-v="${esc(m)}">#${esc(m)}</button><button type="button" data-act="rmref" data-path="memo" data-v="${esc(m)}" aria-label="빼기">×</button></span>`;
+}
+const folderChip = f => `<span class="chip fold">▸ ${esc((S.folders[f] || {}).name || f)}</span>`;
+const extraMeta = (c, id, d) => L(d.memo).map(m => memoChip(m)).join("") + foldersOf(c, id).map(folderChip).join("");
+
 /* ---------- 목록 ---------- */
 function renderTabs(){
   $("#tabs").innerHTML = Object.entries(COLS).map(([c,l]) =>
     `<button class="tab" role="tab" aria-selected="${c===tab}" data-act="tab" data-c="${c}">${l}<span class="n">${Object.keys(S[c]).length}</span></button>`).join("");
 }
 // 검색어: 그냥 글자는 이름·id·효과 어디든. 따옴표로 띄어쓰기 묶기.
-//   tag:공격  tag:"화상"  (강화 카드의 태그도 본다)   -tag:이동 (빼기)
-//   kind:보상 / kind:기본     has:강화  has:재료  no:태그  no:강화  no:재료
+//   tag:공격  tag:"화상"  (강화 카드의 태그도 보고, 태그에 달린 상위 태그·테마까지 본다)   -tag:이동 (빼기)
+//   kind:보상 / kind:기본     has:강화  has:재료  has:메모  has:폴더  no:태그  no:강화  no:재료
+//   cost:기력 (기력 비용이 있는 카드)  cost:3 (어느 자원이든 3)  cost:>=2  cost:기력>=2  cost:없음
+//     cost:기력 cost:3 처럼 자원과 숫자를 같이 쓰면 "기력 3"으로 묶어서 본다 (강화 카드의 비용도 본다)
+//   memo:밸런스 (메모 태그)   folder:"테마 A" (폴더, 하위 폴더까지)
 function parseQuery(text){
   const out = [];
   const re = /(-?)(\w+):"([^"]*)"|(-?)(\w+):(\S+)|"([^"]*)"|(\S+)/g;
@@ -332,13 +478,48 @@ function tagIdsFor(val){
   return Object.keys(S.tags).filter(id => id.toLowerCase() === v || (S.tags[id].name||"").toLowerCase() === v);
 }
 function allTags(d){ return [...(d.tags||[]), ...(d.upgrades||[]).flatMap(u => u.tags||[])]; }
+// 비용 검색: cost:기력  cost:3  cost:>=2  cost:기력>=2  cost:기력:3  cost:없음
+const COSTKEY = {energy:"energy", "기력":"energy", mana:"mana", "마나":"mana", hp:"hp", "체력":"hp", gold:"gold", "골드":"gold", "돈":"gold"};
+function parseCost(val){
+  const v = String(val || "").trim().toLowerCase();
+  if(["none", "free", "없음", "무료"].includes(v)) return {none:true};
+  const m = v.match(/^([a-z가-힣]+)?\s*:?\s*(>=|<=|=|>|<)?\s*(\d+)?$/);
+  if(!m) return null;
+  const kind = m[1] ? COSTKEY[m[1]] : undefined;
+  if(m[1] && !kind) return null;
+  const n = m[3] !== undefined ? Number(m[3]) : undefined;
+  if(!kind && n === undefined) return null;
+  if(!kind && n === 0 && !m[2]) return {none:true};
+  return {kind, op:m[2] || "=", n};
+}
+const cmp = (a, op, n) => op === ">=" ? a >= n : op === "<=" ? a <= n : op === ">" ? a > n : op === "<" ? a < n : a === n;
+function costOk(cost, s){
+  if(s.none) return COST.every(([k]) => !cost[k]);
+  if(s.kind) return s.n === undefined ? (cost[s.kind] || 0) > 0 : cmp(cost[s.kind] || 0, s.op, s.n);
+  return COST.some(([k]) => (cost[k] || 0) > 0 && cmp(cost[k], s.op, s.n));
+}
+// 한 비용 칸이 조건들을 다 만족하나. 자원 이름과 숫자가 같이 있으면 그 자원의 숫자로 본다
+function costMatch(cost, specs){
+  const kinds = specs.filter(s => s.kind && s.n === undefined);
+  for(const s of specs){
+    if(!s.none && !s.kind && s.n !== undefined && kinds.length){ if(!kinds.some(k => cmp(cost[k.kind] || 0, s.op, s.n))) return false; }
+    else if(!costOk(cost, s)) return false;
+  }
+  return true;
+}
+const costList = d => [d.cost || {}, ...L(d.upgrades).map(u => u.cost || {})];
 function test(c, id, d, t){
   const v = (t.val || "").toLowerCase();
-  if(t.key === "tag"){ const ids = tagIdsFor(t.val); return allTags(d).some(x => ids.includes(x)); }
+  if(t.key === "tag"){ const ids = tagIdsFor(t.val); const have = expandTags(tagIdsOf(c, id, d)); return ids.some(x => have.has(x)); }
   if(t.key === "kind"){ const k = KINDS.find(([a,b]) => a === v || b === t.val); return !!k && d.kind === k[0]; }
+  if(t.key === "cost"){ const s = c === "cards" ? parseCost(t.val) : null; return !!s && costList(d).some(cost => costMatch(cost, [s])); }
+  if(t.key === "memo") return L(d.memo).some(m => m.toLowerCase() === v);
+  if(t.key === "folder") return inFolder(c, id, t.val);
   if(t.key === "has" || t.key === "no"){
     const want = t.key === "has";
-    const f = {"강화":() => (d.upgrades||[]).length > 0, "재료":() => (d.upgrades||[]).some(u => (u.materials||[]).length) || (d.drops||[]).length > 0, "태그":() => allTags(d).length > 0, "비고":() => !!d.note}[t.val];
+    const f = {"강화":() => (d.upgrades||[]).length > 0, "재료":() => (d.upgrades||[]).some(u => (u.materials||[]).length) || (d.drops||[]).length > 0,
+      "태그":() => c === "tags" ? attached(id).length > 0 : tagIdsOf(c, id, d).length > 0, "비고":() => !!d.note,
+      "메모":() => L(d.memo).length > 0, "폴더":() => foldersOf(c, id).length > 0}[t.val];
     return f ? f() === want : true;
   }
   const hay = (id + " " + JSON.stringify(d)).toLowerCase();
@@ -347,17 +528,28 @@ function test(c, id, d, t){
 function matches(c, id){
   if(!q.trim()) return true;
   const d = S[c][id];
-  return parseQuery(q).every(t => test(c, id, d, t) !== t.neg);
+  const toks = parseQuery(q);
+  // 빼기 없는 cost: 조건은 한 비용 칸에서 같이 만족해야 한다 (cost:기력 cost:3 = 기력 3)
+  const specs = toks.filter(t => t.key === "cost" && !t.neg).map(t => parseCost(t.val)).filter(Boolean);
+  if(specs.length && (c !== "cards" || !costList(d).some(cost => costMatch(cost, specs)))) return false;
+  return toks.filter(t => !(t.key === "cost" && !t.neg && parseCost(t.val))).every(t => test(c, id, d, t) !== t.neg);
 }
 function rowMeta(c, id){
   const d = S[c][id];
   if(c === "cards"){
     const ups = d.upgrades || [];
-    return `${pips(d.cost)}${(d.tags||[]).map(t => tagChip(t)).join("")}${ups.length ? `<span>강화 ${ups.map(u => `<b style="color:${vcolor(u.key)}">●</b>`).join("")}</span>` : ""}`;
+    return `${pips(d.cost)}${(d.tags||[]).map(t => tagChip(t)).join("")}${ups.length ? `<span>강화 ${ups.map(u => `<b style="color:${vcolor(u.key)}">●</b>`).join("")}</span>` : ""}${extraMeta(c, id, d)}`;
   }
-  if(c === "materials"){ const u = matUses(id).length, dr = matDrops(id).length; return `<span>카드 ${u}곳</span><span>· 드랍 ${dr}종</span>${d.source?`<span>· ${esc(d.source)}</span>`:""}`; }
-  if(c === "enemies") return `<span class="mono">HP ${d.hp ?? "-"} · ATK ${d.atk ?? "-"}</span>${d.floors?`<span>· ${esc(d.floors)}층</span>`:""}${(d.tags||[]).map(t => tagChip(t)).join("")}`;
-  if(c === "tags") return `<span class="chip" style="color:var(--t-${d.color||"slate"})">${esc(d.name||id)}</span><span>${tagUses(id).length}곳</span>`;
+  if(c === "materials"){ const u = matUses(id).length, dr = matDrops(id).length; return `<span>카드 ${u}곳</span><span>· 드랍 ${dr}종</span>${d.source?`<span>· ${esc(d.source)}</span>`:""}${extraMeta(c, id, d)}`; }
+  if(c === "enemies") return `<span class="mono">HP ${d.hp ?? "-"} · ATK ${d.atk ?? "-"}</span>${d.floors?`<span>· ${esc(d.floors)}층</span>`:""}${(d.tags||[]).map(t => tagChip(t)).join("")}${extraMeta(c, id, d)}`;
+  if(c === "tags"){
+    const mem = members(id).length;
+    return `<span class="chip" style="color:var(--t-${d.color||"slate"})">${esc(d.name||id)}</span><span>${tagUses(id).length}곳</span>${mem ? `<span>· 구성원 ${mem}</span>` : ""}${attached(id).map(t => tagChip(t)).join("")}${extraMeta(c, id, d)}`;
+  }
+  if(c === "folders"){
+    const items = L(d.items), by = ITEMC.map(k => [k, items.filter(x => x.c === k).length]).filter(x => x[1]);
+    return `<span>${items.length}개</span>${by.map(([k, n]) => `<span>· ${COLS[k]} ${n}</span>`).join("")}${d.parent && S.folders[d.parent] ? `<span>· ▸ ${esc(folderPath(d.parent))}</span>` : ""}`;
+  }
 }
 function renderList(){
   const el = $("#list");
@@ -375,9 +567,19 @@ function renderList(){
     $("#gateForm").onsubmit = loginEmail;
     return; }
   if(mode === "denied"){ el.innerHTML = `<div class="gate"><b style="color:var(--ink)">이 계정은 아직 허용 안 됐어.</b><span>Firebase 콘솔 → Realtime Database → 규칙에 이 메일을 넣어:</span><code>${esc(user && user.email)}</code><button class="btn" type="button" id="gateOut">다른 계정으로</button></div>`; $("#gateOut").onclick = () => auth.signOut(); return; }
-  const ids = sortIds(tab).filter(id => matches(tab, id));
-  const hint = tab === "cards" ? `예) <code data-q='tag:"공격"'>tag:"공격"</code> <code data-q="-tag:이동">-tag:이동</code> <code data-q="kind:보상">kind:보상</code> <code data-q="has:강화">has:강화</code> <code data-q="no:태그">no:태그</code>`
-    : tab === "enemies" ? `예) <code data-q='tag:"독"'>tag:"독"</code> <code data-q="no:재료">no:재료</code>` : "";
+  const filtered = !!q.trim();
+  const depth = {};
+  let ids;
+  if(tab === "folders" && !filtered){ const o = folderOrder(); ids = o.map(x => x.id); o.forEach(x => (depth[x.id] = x.depth)); }
+  else ids = sortIds(tab).filter(id => matches(tab, id));
+  const hint = tab === "cards" ? `예) <code data-q='tag:"공격"'>tag:"공격"</code> <code data-q="-tag:이동">-tag:이동</code> <code data-q="kind:보상">kind:보상</code> <code data-q="has:강화">has:강화</code> <code data-q="no:태그">no:태그</code><br>
+      비용) <code data-q="cost:기력">cost:기력</code> <code data-q="cost:기력 cost:3">cost:기력 cost:3</code> <code data-q="cost:마나>=2">cost:마나&gt;=2</code> <code data-q="cost:없음">cost:없음</code><br>
+      정리) <code data-q="has:메모">has:메모</code> <code data-q="no:폴더">no:폴더</code> <code data-q='memo:"밸런스"'>memo:"…"</code> <code data-q='folder:"…"'>folder:"…"</code>`
+    : tab === "enemies" ? `예) <code data-q='tag:"독"'>tag:"독"</code> <code data-q="no:재료">no:재료</code> <code data-q="has:메모">has:메모</code> <code data-q="no:폴더">no:폴더</code>`
+    : tab === "tags" ? `예) <code data-q="has:태그">has:태그</code> (다른 태그에 달린 태그) <code data-q='tag:"테마 A"'>tag:"…"</code> (그 테마의 구성원) <code data-q="no:폴더">no:폴더</code>`
+    : tab === "materials" ? `예) <code data-q="has:메모">has:메모</code> <code data-q="no:폴더">no:폴더</code>`
+    : tab === "folders" ? `폴더는 카드·적·재료·태그를 한 곳에 묶어 둬. 다른 탭 검색에서 <code>folder:"이름"</code>으로 꺼낼 수 있어.` : "";
+  const bulk = filtered && ids.length && tab !== "folders" ? ` <button type="button" class="btn" style="padding:1px 8px;font-size:11px" data-act="bulkfolder">결과 ${ids.length}개를 폴더에 담기</button>` : "";
   // 검색창은 한 번만 만들고 아래 목록만 다시 그린다 (다시 만들면 한글 조합이 끊겨 "ㄴㅏㄷㅏ"가 된다)
   let bar = el.querySelector("#search");
   if(!bar || el.dataset.tab !== tab){
@@ -385,6 +587,7 @@ function renderList(){
     el.innerHTML = `
     <div class="listbar">
       <input id="search" type="search" placeholder="${COLS[tab]} 검색 (tag:이름도 된다)" value="${esc(q)}" autocomplete="off" autocapitalize="off" spellcheck="false">
+      ${tab === "tags" ? `<button class="btn" type="button" data-act="themes">테마</button>` : ""}
       <button class="btn primary" type="button" data-act="new">+ 새 ${COLS[tab]}</button>
     </div>
     <div class="qhint" id="qhint"></div>
@@ -392,10 +595,10 @@ function renderList(){
     bar = el.querySelector("#search");
   } else if(bar.value !== q && document.activeElement !== bar) bar.value = q;
   const qh = el.querySelector("#qhint");
-  qh.innerHTML = hint;
-  qh.hidden = !hint;
+  qh.innerHTML = hint + bulk;
+  qh.hidden = !(hint || bulk);
   el.querySelector("#rows").innerHTML = ids.length ? ids.map(id => `
-      <button type="button" class="row ${sel && sel.c===tab && sel.id===id ? "sel" : ""}" data-act="open" data-id="${esc(id)}">
+      <button type="button" class="row ${sel && sel.c===tab && sel.id===id ? "sel" : ""}" data-act="open" data-id="${esc(id)}"${depth[id] ? ` style="margin-left:${Math.min(depth[id], 5) * 16}px"` : ""}>
         <span class="nm">${esc(S[tab][id].name || id)}</span><span class="id mono">${esc(id)}</span>
         <span class="meta">${rowMeta(tab, id)}</span>
       </button>`).join("") : `<p class="empty">${Object.keys(S[tab]).length ? "검색에 맞는 항목이 없어." : emptyText(tab)}</p>`;
@@ -404,23 +607,32 @@ function emptyText(c){
   return {cards:"아직 카드가 없어. ‘+ 새 카드’로 만들거나, 가져오기로 zip·json을 불러와.",
     materials:"재료가 없어. 여기서 만들어두면 카드 강화와 적 드랍에서 골라 쓸 수 있어. 카드 편집기에서 이름을 바로 쳐도 새로 만들어져.",
     enemies:"적이 없어. 적을 만들고 드랍 재료를 붙이면, 재료 쪽에 어디서 나오는지 자동으로 보여.",
-    tags:"태그가 없어. 카드나 적 편집기의 태그 칸에 이름을 치면 바로 생겨."}[c];
+    tags:"태그가 없어. 카드나 적 편집기의 태그 칸에 이름을 치면 바로 생겨.",
+    folders:"폴더가 없어. ‘+ 새 폴더’로 만들거나, 카드·적·재료·태그 편집기의 폴더 칸에 이름을 치면 바로 생겨. 검색 결과를 통째로 담을 수도 있어."}[c];
 }
 
 /* ---------- 편집기 ---------- */
 function openEditor(c, id){
-  sel = {c, id}; draft = clone(S[c][id]);
+  sel = {c, id}; draft = clone(S[c][id]); themeOpen = {};
+  if(c === "tags") draft.tags = selfTags(id, draft.tags);
   $("#editor").hidden = false; renderEditor(true); renderList();
 }
 function closeEditor(){ sel = null; draft = null; $("#editor").hidden = true; renderEditor(); renderList(); }
-function commit(){ put(sel.c, sel.id, clone(draft)); }
+function commit(){
+  if(sel.c === "tags") draft.tags = selfTags(sel.id, draft.tags);
+  put(sel.c, sel.id, clone(draft));
+}
 
 function costRow(path, cost){
   return `<div class="costs">${COST.map(([k,l]) => `<label class="cost ${k}"><span>${l}</span><input type="number" inputmode="numeric" min="0" id="${path}-${k}" data-f="${path}.${k}" data-num value="${cost && cost[k] ? cost[k] : ""}" placeholder="0"></label>`).join("")}</div>`;
 }
-function tagField(path, tags){
-  return `<div class="f wide"><span class="lab">태그</span>
-    <div class="refs">${(tags||[]).map(t => tagChip(t, true, path)).join("") || `<span class="hint">없음</span>`}</div>
+function tagField(path, tags, opts = {}){
+  const selfId = opts.self;
+  const chips = (tags||[]).map(t => selfId && t === selfId
+    ? `<span class="chip self" style="color:var(--t-${(S.tags[t]||{}).color||"slate"})">${esc((S.tags[t]||{}).name||t)}<small>(자기 자신)</small></span>`
+    : tagChip(t, true, path)).join("");
+  return `<div class="f wide"><span class="lab">${opts.label || "태그"}</span>
+    <div class="refs">${chips || `<span class="hint">없음</span>`}</div>
     ${adder("tags", path, "태그 이름 (고르거나 치고 엔터)")}${recRow(path)}</div>`;
 }
 function matRows(path, list){
@@ -435,23 +647,48 @@ function adder(c, path, ph){
   return `<div class="adder col"><div class="sugg" id="sugg-${path}" hidden></div><input placeholder="${ph}" data-add="${c}" data-path="${path}" id="add-${path}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done"></div>`;
 }
 function usage(c, id){
-  if(c === "tags") return tagUses(id).length;
+  if(c === "tags") return tagUses(id).length + members(id).length;
   return matUses(id).length + matDrops(id).length;
 }
 function showSugg(t){
   const box = document.getElementById("sugg-" + t.dataset.path);
   if(!box || !sel) return;
-  const c = t.dataset.add, v = t.value.trim().toLowerCase();
-  const cur = getPath(draft, t.dataset.path) || [];
-  const have = c === "tags" ? cur : cur.map(m => m.id);
-  let ids = Object.keys(S[c]).filter(id => c !== "tags" || !have.includes(id));
-  if(v) ids = ids.filter(id => id.toLowerCase().includes(v) || (S[c][id].name||"").toLowerCase().includes(v));
-  ids.sort((a,b) => usage(c, b) - usage(c, a) || (S[c][a].name||a).localeCompare(S[c][b].name||b, "ko"));
-  const exact = v && Object.keys(S[c]).some(id => (S[c][id].name||"").toLowerCase() === v || id.toLowerCase() === v);
-  const chips = ids.map(id => c === "tags"
-      ? `<button type="button" class="chip" data-pick="${esc(id)}" style="color:var(--t-${S.tags[id].color||"slate"})">${esc(S.tags[id].name||id)}</button>`
+  const c = t.dataset.add, raw = t.value.trim(), v = raw.toLowerCase();
+  const cur = getPath(draft, t.dataset.path);
+  let chips = "", make = "";
+  const tagBtn = id => `<button type="button" class="chip" data-pick="${esc(id)}" style="color:var(--t-${S.tags[id].color||"slate"})">${esc(S.tags[id].name||id)}</button>`;
+  const hit = (id, col) => !v || id.toLowerCase().includes(v) || (S[col][id].name||"").toLowerCase().includes(v);
+  if(c === "memo"){
+    const have = L(cur), n = memoCounts();
+    const ms = Object.keys(n).filter(m => !have.includes(m) && (!v || m.toLowerCase().includes(v))).sort((a, b) => n[b] - n[a] || a.localeCompare(b, "ko"));
+    chips = ms.map(m => `<button type="button" class="chip memo" data-pick="${esc(m)}">#${esc(m)} <small>${n[m]}</small></button>`).join("");
+    make = raw && !Object.keys(n).some(m => m.toLowerCase() === v) && !have.includes(raw) ? `<button type="button" class="chip new" data-make="1">+ #${esc(raw)} 새 메모 태그</button>` : "";
+  } else if(c === "folder"){
+    const have = foldersOf(sel.c, sel.id);
+    const fs = folderOrder().map(x => x.id).filter(f => !have.includes(f) && (!v || f.toLowerCase().includes(v) || folderPath(f).toLowerCase().includes(v)));
+    chips = fs.map(f => `<button type="button" class="chip fold" data-pick="${esc(f)}">▸ ${esc(folderPath(f))}</button>`).join("");
+    make = raw && !folderIdsFor(raw).length ? `<button type="button" class="chip new" data-make="1">+ 폴더 "${esc(raw)}" 새로 만들기</button>` : "";
+  } else if(c === "item"){
+    const ks = itemCandidates(v, sel.c === "folders" ? draft.items : []).filter(k => !(sel.c === "folders" && k === "folders/" + sel.id)).slice(0, 60);
+    chips = ks.map(k => `<button type="button" class="chip" data-pick="${esc(k)}"><span class="hint">${COLS[k.split("/")[0]]}</span> ${esc(itemLabel(k))}</button>`).join("");
+  } else if(c === "member"){
+    const ban = new Set([sel.id, ...members(sel.id)]);
+    const ids = Object.keys(S.tags).filter(id => !ban.has(id) && !tagClosure(sel.id).has(id) && hit(id, "tags"))
+      .sort((a, b) => (S.tags[a].name||a).localeCompare(S.tags[b].name||b, "ko"));
+    chips = ids.map(tagBtn).join("");
+    const exact = v && Object.keys(S.tags).some(id => (S.tags[id].name||"").toLowerCase() === v || id.toLowerCase() === v);
+    make = raw && !exact ? `<button type="button" class="chip new" data-make="1">+ "${esc(raw)}" 새 태그를 구성원으로</button>` : "";
+  } else {
+    const have = c === "tags" ? L(cur) : L(cur).map(m => m.id);
+    let ids = Object.keys(S[c]).filter(id => c !== "tags" || !have.includes(id));
+    if(c === "tags" && sel.c === "tags") ids = ids.filter(id => id !== sel.id && !tagClosure(id).has(sel.id)); // 자기 자신·순환 제외
+    if(v) ids = ids.filter(id => hit(id, c));
+    ids.sort((a,b) => usage(c, b) - usage(c, a) || (S[c][a].name||a).localeCompare(S[c][b].name||b, "ko"));
+    const exact = v && Object.keys(S[c]).some(id => (S[c][id].name||"").toLowerCase() === v || id.toLowerCase() === v);
+    chips = ids.map(id => c === "tags" ? tagBtn(id)
       : `<button type="button" class="chip" data-pick="${esc(id)}">${esc(S.materials[id].name||id)}${have.includes(id) ? " +1" : ""}</button>`).join("");
-  const make = v && !exact ? `<button type="button" class="chip new" data-make="1">+ "${esc(t.value.trim())}" 새로 만들기</button>` : "";
+    make = raw && !exact ? `<button type="button" class="chip new" data-make="1">+ "${esc(raw)}" 새로 만들기</button>` : "";
+  }
   box.innerHTML = chips + make;
   box.hidden = !(chips || make);
 }
@@ -470,6 +707,17 @@ const TAG_HINTS = [
   [/범위|주변|\d+칸 범위/, ["범위", "area"]],
   [/제거|정화/, ["정화", "cleanse"]]
 ];
+// 태그의 추천 키워드: 한 줄이 한 규칙(; 도 줄바꿈). || 또는 " or " = 하나라도, && 또는 " and " = 전부. && 가 || 보다 먼저 묶인다.
+//   체력 && 회복        뽑기 || 뽑는 || 뽑고 || 드로우
+function kwTerm(text, term){
+  term = term.trim().replace(/^["']|["']$/g, "");
+  if(!term) return false;
+  return term.length === 1 ? new RegExp(`(^|[^가-힣])${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(text) : text.includes(term);
+}
+function kwMatch(text, rules){
+  return String(rules || "").split(/\n|;/).some(rule => rule.trim() &&
+    rule.split(/\s*\|\|?\s*|\s+or\s+/i).some(part => part.trim() && part.split(/\s*&&?\s*|\s+and\s+/i).every(t => kwTerm(text, t))));
+}
 function recTags(text, have, forEnemy = false){
   // 능력치 이름(공격력·방어력·이동속도·최대체력)은 태그가 아니라 수치라서 빼고 본다
   text = (text || "").replace(/공격력|방어력|이동속도|최대\s*체력/g, " ");
@@ -481,6 +729,7 @@ function recTags(text, have, forEnemy = false){
     const re = n.length === 1 ? new RegExp(`(^|[^가-힣])${n}`) : null;
     if(re ? re.test(text) : text.includes(n)) out.add(id);
   }
+  for(const id of Object.keys(S.tags)) if(S.tags[id].keywords && kwMatch(text, S.tags[id].keywords)) out.add(id);
   for(const [re, names] of TAG_HINTS){
     if(!re.test(text)) continue;
     const id = Object.keys(S.tags).find(k => names.includes(S.tags[k].name) || names.includes(k));
@@ -498,10 +747,26 @@ function recSource(path){
 }
 function recRow(path){
   if(!sel) return "";
-  const rec = recTags(recSource(path), getPath(draft, path), sel.c === "enemies");
-  if(!rec.length) return `<div class="recs" id="recs-${path}" hidden></div>`;
-  return `<div class="recs" id="recs-${path}">추천 ${rec.map(id => `<button type="button" class="chip" data-act="rec" data-path="${path}" data-v="${esc(id)}" style="color:var(--t-${S.tags[id].color||"slate"})">+ ${esc(S.tags[id].name||id)}</button>`).join("")}
-    ${rec.length > 1 ? `<button type="button" class="btn" data-act="recall" data-path="${path}" style="padding:2px 8px;font-size:12px">모두</button>` : ""}</div>`;
+  const have = getPath(draft, path) || [];
+  const isSelfPath = sel.c === "tags";
+  const rec = isSelfPath ? [] : recTags(recSource(path), have, sel.c === "enemies");
+  const btn = (act, id, extra = "") => `<button type="button" class="chip" data-act="${act}" data-path="${path}" data-v="${esc(id)}" style="color:var(--t-${S.tags[id].color||"slate"})"${extra}>+ ${esc(S.tags[id].name||id)}</button>`;
+  let h = "";
+  if(rec.length) h += `<div class="recs"><span class="lab2">추천</span>${rec.map(id => btn("rec", id)).join("")}${rec.length > 1 ? `<button type="button" class="btn" data-act="recall" data-path="${path}" style="padding:2px 8px;font-size:12px">모두</button>` : ""}</div>`;
+  if(!isSelfPath){
+    const fit = fitTags(have).filter(id => !rec.includes(id));
+    if(fit.length) h += `<div class="recs"><span class="lab2">어울림</span>${fit.map(id => btn("rec", id)).join("")}</div>`;
+    const ths = [...new Set(have.flatMap(t => [...tagClosure(t)].filter(x => x !== t)))].filter(th => members(th).length);
+    if(ths.length){
+      const open = themeOpen[path];
+      h += `<div class="recs"><span class="lab2">테마</span>${ths.map(th => `<button type="button" class="chip" aria-pressed="${open === th}" data-act="theme" data-path="${path}" data-v="${esc(th)}" style="color:var(--t-${S.tags[th].color||"slate"})">${esc(S.tags[th].name||th)} ${members(th).length}${open === th ? " ▾" : ""}</button>`).join("")}</div>`;
+      if(open && S.tags[open]){
+        const ms = members(open).filter(m => !have.includes(m));
+        h += `<div class="recs">${ms.map(id => btn("rec", id)).join("") || `<span class="hint">다 붙어 있어</span>`}${ms.length > 1 ? `<button type="button" class="btn" data-act="themeall" data-path="${path}" data-v="${esc(open)}" style="padding:2px 8px;font-size:12px">모두</button>` : ""}</div>`;
+      }
+    }
+  }
+  return `<div id="recs-${path}" class="recwrap"${h ? "" : " hidden"}>${h}</div>`;
 }
 
 // ---------- 점검 ----------
@@ -533,7 +798,17 @@ function lint(){
     const r = recTags(d.pattern, d.tags, true); if(r.length) add("enemies", id, "추천", `${d.name||id}: 추천 태그 ${r.map(t => S.tags[t].name).join(", ")}`);
     for(const m of d.drops||[]) if(!S.materials[m.id]) add("enemies", id, "없음", `${d.name||id}: 없는 재료 ${m.id}`);
   }
-  for(const id of sortIds("tags")) if(!usedTags.has(id)) add("tags", id, "안 씀", `태그 ${S.tags[id].name||id}: 아무 데도 안 붙었다`);
+  const usedClosure = expandTags([...usedTags].filter(t => S.tags[t]));
+  for(const id of sortIds("tags")){
+    if(!usedClosure.has(id) && !members(id).length) add("tags", id, "안 씀", `태그 ${S.tags[id].name||id}: 아무 데도 안 붙었다`);
+    for(const t of attached(id)) if(!S.tags[t]) add("tags", id, "없음", `태그 ${S.tags[id].name||id}: 없는 태그 ${t}가 달려 있다`);
+  }
+  for(const id of sortIds("folders")){
+    const d = S.folders[id];
+    if(!L(d.items).length && !Object.keys(S.folders).some(f => parentOf(f) === id)) add("folders", id, "안 씀", `폴더 ${d.name||id}: 비었다`);
+    for(const x of L(d.items)) if(!(S[x.c] && S[x.c][x.id])) add("folders", id, "없음", `폴더 ${d.name||id}: 없는 항목 ${x.c}/${x.id}`);
+    if(d.parent && !S.folders[d.parent]) add("folders", id, "없음", `폴더 ${d.name||id}: 없는 상위 폴더 ${d.parent}`);
+  }
   for(const id of sortIds("materials")) if(!matUses(id).length && !matDrops(id).length) add("materials", id, "안 씀", `재료 ${S.materials[id].name||id}: 쓰이는 곳·나오는 곳이 없다`);
   return out;
 }
@@ -560,8 +835,19 @@ function renderEditor(resetScroll){
   if(c === "materials") h += materialEditor(d);
   if(c === "enemies") h += enemyEditor(d);
   if(c === "tags") h += tagEditor(d);
+  if(c === "folders") h += folderEditor(d);
   el.innerHTML = h;
   el.scrollTop = resetScroll ? 0 : top;
+}
+// 메모 태그(개발 메모용, 게임엔 안 나감) + 폴더
+function metaFields(d){
+  const fs = foldersOf(sel.c, sel.id);
+  return `<div class="f wide"><span class="lab">메모 태그 <span class="hint">개발용 · 게임 태그와 별개</span></span>
+      <div class="refs">${L(d.memo).map(m => memoChip(m, true)).join("") || `<span class="hint">없음</span>`}</div>
+      ${adder("memo", "memo", "#밸런스, #나중에, #보스용 … (치고 엔터)")}</div>
+    <div class="f wide"><span class="lab">폴더</span>
+      <div class="refs">${fs.map(f => `<span class="chip fold"><button type="button" class="mlink" data-act="goto" data-c="folders" data-id="${esc(f)}">▸ ${esc(folderPath(f))}</button><button type="button" data-act="rmfolder" data-v="${esc(f)}" aria-label="폴더에서 빼기">×</button></span>`).join("") || `<span class="hint">없음</span>`}</div>
+      ${adder("folder", "folder", "폴더 이름 (고르거나 치고 엔터)")}</div>`;
 }
 function cardEditor(d){
   const ups = d.upgrades || [];
@@ -574,6 +860,7 @@ function cardEditor(d){
       <div class="f wide"><label for="ed-fx">효과</label><textarea id="ed-fx" data-f="effect">${esc(d.effect)}</textarea></div>
       ${tagField("tags", d.tags)}
       <div class="f wide"><label for="ed-note">비고</label><textarea id="ed-note" data-f="note">${esc(d.note)}</textarea></div>
+      ${metaFields(d)}
     </div>
     <section class="blk"><h3>강화 트리<span class="sp"></span>
       <button type="button" class="btn" data-act="addup">+ 강화 추가</button></h3>
@@ -623,6 +910,7 @@ function materialEditor(d){
       ${idField()}
       <div class="f wide"><label for="ed-src">얻는 곳 (메모)</label><input id="ed-src" data-f="source" value="${esc(d.source)}" placeholder="상점, 이벤트, 보스 보상…"></div>
       <div class="f wide"><label for="ed-note">비고</label><textarea id="ed-note" data-f="note">${esc(d.note)}</textarea></div>
+      ${metaFields(d)}
     </div>
     <section class="blk"><h3>쓰이는 카드<span class="sp"></span><span class="hint mono">총 ${total}개</span></h3>
       <div class="uses">${uses.map(x => `<button type="button" class="use" data-act="goto" data-c="cards" data-id="${esc(x.cid)}">
@@ -644,6 +932,7 @@ function enemyEditor(d){
       ${tagField("tags", d.tags)}
       <div class="f wide"><label for="ed-pat">행동 패턴</label><textarea id="ed-pat" data-f="pattern" placeholder="예) 2턴마다 강타, 체력 50% 이하면 분노">${esc(d.pattern)}</textarea></div>
       <div class="f wide"><label for="ed-note">비고</label><textarea id="ed-note" data-f="note">${esc(d.note)}</textarea></div>
+      ${metaFields(d)}
     </div>
     <section class="blk"><h3>드랍 재료</h3>
       ${(d.drops||[]).length ? `<div class="mrow drop hint"><span>재료</span><span>수량</span><span>확률%</span><span></span></div>` : ""}
@@ -656,16 +945,47 @@ function enemyEditor(d){
     </section>`;
 }
 function tagEditor(d){
-  const uses = tagUses(sel.id);
+  const uses = tagUses(sel.id), mem = members(sel.id), rel = relatedTo(sel.id).slice(0, 12);
+  const chipBtn = id => `<button type="button" class="chip" data-act="goto" data-c="tags" data-id="${esc(id)}" style="color:var(--t-${(S.tags[id]||{}).color||"slate"})">${esc((S.tags[id]||{}).name||id)}</button>`;
   return `<div class="grid">
       <div class="f"><label for="ed-name">이름</label><input id="ed-name" data-f="name" value="${esc(d.name)}"></div>
       ${idField()}
       <div class="f wide"><span class="lab">색</span><div class="swatches">${TAGCOLORS.map(k => `<button type="button" class="sw" style="--c:var(--t-${k})" aria-label="${k}" aria-pressed="${(d.color||"slate")===k}" data-act="color" data-v="${k}"></button>`).join("")}</div></div>
       <div class="f wide"><label for="ed-note">설명</label><textarea id="ed-note" data-f="note" placeholder="이 태그가 붙은 카드가 받는 효과, 시너지 메모">${esc(d.note)}</textarea></div>
+      <div class="f wide"><label for="ed-kw">추천 키워드 <span class="hint">효과·패턴에 나오면 이 태그를 추천</span></label><textarea id="ed-kw" data-f="keywords" placeholder="한 줄에 규칙 하나&#10;체력 && 회복&#10;뽑기 || 뽑는 || 뽑고 || 드로우">${esc(d.keywords)}</textarea>
+        <span class="hint">&amp;&amp; 또는 and = 모두 있어야 · || 또는 or = 하나라도 · 태그 이름은 따로 안 적어도 돼</span></div>
+      ${tagField("tags", selfTags(sel.id, d.tags), {self: sel.id, label: "태그 (이 태그가 속한 테마·연관 태그)"})}
+      <div class="f wide"><span class="lab">구성원 <span class="hint">이 태그를 테마로 삼는 태그</span></span>
+        <div class="refs">${mem.map(m => `<span class="chip" style="color:var(--t-${S.tags[m].color||"slate"})"><button type="button" class="mlink" data-act="goto" data-c="tags" data-id="${esc(m)}">${esc(S.tags[m].name||m)}</button><button type="button" data-act="rmmember" data-v="${esc(m)}" aria-label="빼기">×</button></span>`).join("") || `<span class="hint">없음</span>`}</div>
+        ${adder("member", "member", "구성원으로 넣을 태그 (고르거나 치고 엔터)")}</div>
+      ${metaFields(d)}
     </div>
+    ${rel.length ? `<section class="blk"><h3>연관 태그<span class="sp"></span><span class="hint">같은 테마 · 같이 붙은 횟수</span></h3>
+      <div class="uses">${rel.map(r => `<button type="button" class="use" data-act="goto" data-c="tags" data-id="${esc(r.id)}"><span class="sp" style="color:var(--t-${S.tags[r.id].color||"slate"})">${esc(S.tags[r.id].name||r.id)}</span><span class="c">${r.theme ? "테마 " + r.theme : ""}${r.theme && r.co ? " · " : ""}${r.co ? "같이 " + r.co : ""}</span></button>`).join("")}</div></section>` : ""}
     <div class="adder"><button type="button" class="btn" data-act="findtag" data-v="${esc(d.name||sel.id)}">이 태그가 붙은 카드 찾기</button></div>
     <section class="blk"><h3>붙어 있는 곳<span class="sp"></span><span class="hint mono">${uses.length}</span></h3>
       <div class="uses">${uses.map(x => `<button type="button" class="use" data-act="goto" data-c="${x.c}" data-id="${esc(x.id)}"><span class="hint">${COLS[x.c]}</span><span class="sp">${esc(x.label)}</span></button>`).join("") || `<p class="hint">아직 안 붙어 있어.</p>`}</div></section>`;
+}
+function folderEditor(d){
+  const items = L(d.items), subs = Object.keys(S.folders).filter(f => parentOf(f) === sel.id);
+  const ban = folderDesc(sel.id);
+  const opts = folderOrder().filter(x => !ban.has(x.id));
+  return `<div class="grid">
+      <div class="f"><label for="ed-name">이름</label><input id="ed-name" data-f="name" value="${esc(d.name)}"></div>
+      ${idField()}
+      <div class="f wide"><label for="ed-parent">상위 폴더</label><select id="ed-parent" data-f="parent">
+        <option value="">(없음 · 맨 위)</option>
+        ${opts.map(x => `<option value="${esc(x.id)}" ${d.parent===x.id?"selected":""}>${"\u00a0\u00a0".repeat(x.depth)}${esc(S.folders[x.id].name||x.id)}</option>`).join("")}</select></div>
+      <div class="f wide"><label for="ed-note">설명</label><textarea id="ed-note" data-f="note" placeholder="이 폴더에 뭘 모아 두는지">${esc(d.note)}</textarea></div>
+    </div>
+    <section class="blk"><h3>담긴 항목<span class="sp"></span><span class="hint mono">${items.length}</span></h3>
+      <div class="uses">${items.map((x, i) => {
+        const ok = S[x.c] && S[x.c][x.id];
+        return `<div class="mrow"><button type="button" class="use" ${ok ? `data-act="goto" data-c="${x.c}" data-id="${esc(x.id)}"` : "disabled"}><span class="hint">${COLS[x.c] || x.c}</span><span class="sp ${ok ? "" : "missing"}">${esc(ok ? (S[x.c][x.id].name || x.id) : x.id + " (없음)")}</span></button>
+          <button type="button" class="x" data-act="rmrow" data-path="items" data-i="${i}" aria-label="빼기">×</button></div>`; }).join("") || `<p class="hint">비었어. 아래에서 담거나, 항목 편집기의 폴더 칸에서 이 폴더를 고르면 돼.</p>`}</div>
+      ${adder("item", "items", "담을 항목 이름 (카드·적·재료·태그)")}</section>
+    ${subs.length ? `<section class="blk"><h3>하위 폴더</h3><div class="uses">${subs.map(f => `<button type="button" class="use" data-act="goto" data-c="folders" data-id="${esc(f)}"><span class="sp">▸ ${esc(S.folders[f].name||f)}</span><span class="c">${L(S.folders[f].items).length}</span></button>`).join("")}</div></section>` : ""}
+    <div class="adder"><button type="button" class="btn" data-act="findfolder" data-v="${esc(d.name||sel.id)}">이 폴더 항목만 검색 (카드)</button></div>`;
 }
 
 /* ---------- 경로 편집 ---------- */
@@ -681,7 +1001,7 @@ function findOrCreate(c, text){
   const hit = Object.keys(S[c]).find(id => id === t || (S[c][id].name||"") === t);
   if(hit) return hit;
   const id = newId(c);
-  put(c, id, c === "tags" ? {name:t, color:"slate", note:""} : {name:t, source:"", note:""});
+  put(c, id, c === "tags" ? {name:t, color:"slate", note:"", tags:[id]} : c === "folders" ? {name:t, note:"", parent:"", items:[]} : {name:t, source:"", note:""});
   renderTabs();
   return id;
 }
@@ -693,8 +1013,13 @@ function renameRefs(c, a, b){
     for(const id in S.cards){ const d = S.cards[id]; let ch = false;
       const f = arr => (arr||[]).map(t => { if(t === a){ ch = true; return b; } return t; });
       d.tags = f(d.tags); for(const u of d.upgrades || []) u.tags = f(u.tags); if(ch) touch("cards", id); }
+    for(const id in S.tags){ const d = S.tags[id]; if(L(d.tags).includes(a)){ d.tags = d.tags.map(t => t === a ? b : t); touch("tags", id); } }
     for(const id in S.enemies){ const d = S.enemies[id]; if((d.tags||[]).includes(a)){ d.tags = d.tags.map(t => t===a ? b : t); touch("enemies", id); } }
   }
+  if(ITEMC.includes(c)) for(const f in S.folders){ const d = S.folders[f]; let ch = false;
+    for(const x of L(d.items)) if(x.c === c && x.id === a){ x.id = b; ch = true; }
+    if(ch) touch("folders", f); }
+  if(c === "folders") for(const f in S.folders) if(S.folders[f].parent === a){ S.folders[f].parent = b; touch("folders", f); }
   if(c === "materials"){
     for(const id in S.cards){ const d = S.cards[id]; let ch = false;
       for(const u of d.upgrades || []) for(const m of u.materials || []) if(m.id === a){ m.id = b; ch = true; }
@@ -753,18 +1078,38 @@ document.addEventListener("click", e => {
   if(act === "close"){ closeEditor(); return; }
   if(act === "findtag"){ tab = "cards"; q = `tag:"${b.dataset.v}"`; renderTabs(); closeEditor(); return; }
   if(act === "lintgo"){ $("#sheetHost").innerHTML = ""; tab = b.dataset.c; q = ""; renderTabs(); openEditor(b.dataset.c, b.dataset.id); return; }
+  if(act === "themes"){ renderThemes(); return; }
+  if(act === "bulkfolder"){ renderBulk(); return; }
+  if(act === "bulkgo"){
+    const fid = b.dataset.f || findOrCreate("folders", ($("#bulkName") || {}).value || "");
+    if(!fid) return;
+    const n = addToFolder(fid, bulkIds().map(id => ({c:tab, id})));
+    $("#sheetHost").innerHTML = ""; renderTabs(); renderList();
+    setStatus(`${n}개를 "${nm("folders", fid)}" 폴더에 담았어`); return;
+  }
+  if(act === "findmemo"){ tab = sel.c; q = `memo:"${b.dataset.v}"`; renderTabs(); closeEditor(); return; }
+  if(act === "findfolder"){ tab = "cards"; q = `folder:"${b.dataset.v}"`; renderTabs(); closeEditor(); return; }
   if(act === "new"){
     const id = newId(tab);
     const base = {cards:{name:"새 카드", kind:"reward", cost:{energy:1}, effect:"", tags:[], note:"", upgrades:[]},
       materials:{name:"새 재료", source:"", note:""},
       enemies:{name:"새 적", hp:10, atk:2, floors:"", tags:[], drops:[], pattern:"", note:""},
-      tags:{name:"새 태그", color:"slate", note:""}}[tab];
+      tags:{name:"새 태그", color:"slate", note:"", tags:[id]},
+      folders:{name:"새 폴더", note:"", parent:"", items:[]}}[tab];
     put(tab, id, base); renderTabs(); openEditor(tab, id);
     setTimeout(() => { const n = $("#ed-name"); if(n){ n.focus(); n.select(); } }, 30);
     return;
   }
   if(!sel) return;
-  if(act === "delete"){ arm(b, "한 번 더 누르면 삭제", () => { put(sel.c, sel.id, null); renderTabs(); closeEditor(); }); return; }
+  if(act === "delete"){ arm(b, "한 번 더 누르면 삭제", () => { const c = sel.c, id = sel.id; put(c, id, null); purgeRefs(c, id); renderTabs(); closeEditor(); }); return; }
+  if(act === "rmfolder"){ const f = S.folders[b.dataset.v]; if(f){ f.items = L(f.items).filter(x => !(x.c === sel.c && x.id === sel.id)); put("folders", b.dataset.v, f); } renderEditor(); renderList(); return; }
+  if(act === "rmmember"){ const m = S.tags[b.dataset.v]; if(m){ m.tags = selfTags(b.dataset.v, L(m.tags).filter(x => x !== sel.id)); put("tags", b.dataset.v, m); } renderEditor(); renderList(); return; }
+  if(act === "theme"){ const pth = b.dataset.path; themeOpen[pth] = themeOpen[pth] === b.dataset.v ? null : b.dataset.v; const r = document.getElementById("recs-" + pth); if(r) r.outerHTML = recRow(pth); return; }
+  if(act === "themeall"){
+    const arr = getPath(draft, b.dataset.path) || [];
+    for(const m of members(b.dataset.v)) if(!arr.includes(m)) arr.push(m);
+    setPath(draft, b.dataset.path, arr); commit(); renderEditor(); renderList(); return;
+  }
   if(act === "rmref"){ const arr = getPath(draft, b.dataset.path) || []; setPath(draft, b.dataset.path, arr.filter(x => x !== b.dataset.v)); commit(); renderEditor(); renderList(); return; }
   if(act === "rmrow"){ const arr = getPath(draft, b.dataset.path) || []; arr.splice(+b.dataset.i, 1); commit(); renderEditor(); renderList(); return; }
   if(act === "color"){ draft.color = b.dataset.v; commit(); renderEditor(); renderList(); return; }
@@ -819,17 +1164,72 @@ document.addEventListener("keydown", e => {
 });
 function addRef(t){
   const val = t.value; t.value = ""; if(!val.trim()) return;
-  const id = findOrCreate(t.dataset.add, val); if(!id) return;
+  const kind = t.dataset.add;
+  if(kind === "memo") return addRefId(t, val.trim().replace(/^#+/, ""));
+  if(kind === "item"){
+    const v = val.trim().toLowerCase();
+    const hits = itemCandidates(v, draft.items);
+    const exact = hits.filter(k => itemLabel(k).toLowerCase() === v || k.toLowerCase() === v);
+    const k = exact[0] || (hits.length === 1 ? hits[0] : null);
+    if(k) addRefId(t, k);
+    else { t.value = val; showSugg(t); }
+    return;
+  }
+  const col = kind === "member" ? "tags" : kind === "folder" ? "folders" : kind;
+  const id = findOrCreate(col, val); if(!id) return;
   addRefId(t, id);
 }
 function addRefId(t, id){
   t.value = "";
-  const path = t.dataset.path, arr = getPath(draft, path) || [];
-  if(t.dataset.add === "tags"){ if(!arr.includes(id)) arr.push(id); }
-  else { const row = arr.find(m => m.id === id); if(row) row.count = (+row.count || 1) + 1; else arr.push({id, count:1}); }
-  setPath(draft, path, arr); commit();
+  const kind = t.dataset.add, path = t.dataset.path;
+  if(kind === "memo"){
+    const m = String(id).trim().replace(/^#+/, ""); if(!m) return;
+    const arr = L(draft.memo).slice(); if(!arr.includes(m)) arr.push(m);
+    draft.memo = arr; commit();
+  } else if(kind === "folder"){
+    addToFolder(id, [{c:sel.c, id:sel.id}]); renderTabs();
+  } else if(kind === "member"){
+    if(!tagClosure(sel.id).has(id) && id !== sel.id) attachTag(id, sel.id);
+  } else if(kind === "item"){
+    const i = id.indexOf("/"); const arr = L(draft.items).slice();
+    const it = {c:id.slice(0, i), id:id.slice(i + 1)};
+    if(!arr.some(x => x.c === it.c && x.id === it.id)) arr.push(it);
+    draft.items = arr; commit();
+  } else {
+    const arr = getPath(draft, path) || [];
+    if(kind === "tags"){ if(!arr.includes(id) && !(sel.c === "tags" && (id === sel.id || tagClosure(id).has(sel.id)))) arr.push(id); }
+    else { const row = arr.find(m => m.id === id); if(row) row.count = (+row.count || 1) + 1; else arr.push({id, count:1}); }
+    setPath(draft, path, arr); commit();
+  }
   const fid = t.id; renderEditor(); renderList();
   const again = document.getElementById(fid); if(again) again.focus();
+}
+
+// ---------- 테마 한눈에 / 결과를 폴더에 담기 ----------
+function renderThemes(){
+  const th = themes().sort((a, b) => members(b).length - members(a).length || (S.tags[a].name||a).localeCompare(S.tags[b].name||b, "ko"));
+  const cnt = {};
+  for(const t of th) for(const m of members(t)) cnt[m] = (cnt[m] || 0) + 1;
+  const tc = id => `<span class="chip" style="color:var(--t-${S.tags[id].color||"slate"})">${esc(S.tags[id].name||id)}</span>`;
+  const overlap = Object.keys(cnt).filter(m => cnt[m] > 1).sort((a, b) => cnt[b] - cnt[a]);
+  const orphan = Object.keys(S.tags).filter(id => !attached(id).length && !members(id).length);
+  sheet(`<h3>테마 ${th.length}개</h3>
+    <p>태그에 다른 태그를 달면(편집기 맨 위 ‘태그’ 칸) 그 태그가 테마가 돼. 카드에 구성원 태그를 붙이면 테마로도 검색돼 (<span class="mono">tag:"테마 이름"</span>).</p>
+    ${th.map(t => `<div class="theme-grid"><button type="button" class="use" data-act="lintgo" data-c="tags" data-id="${esc(t)}"><span class="sp">${tc(t)} <span class="hint">구성원 ${members(t).length}</span></span></button>
+      <div class="refs">${members(t).map(m => `<span class="chip" style="color:var(--t-${S.tags[m].color||"slate"})">${esc(S.tags[m].name||m)}${cnt[m] > 1 ? ` <small>×${cnt[m]}</small>` : ""}</span>`).join("")}</div></div>`).join("") || `<p class="hint">아직 테마가 없어.</p>`}
+    ${overlap.length ? `<p><b>여러 테마에 걸친 태그</b><br><span class="refs">${overlap.map(m => `${tc(m)}<small class="hint">${th.filter(t => members(t).includes(m)).map(t => esc(S.tags[t].name||t)).join("·")}</small>`).join(" ")}</span></p>` : ""}
+    ${orphan.length ? `<p><b>어느 테마에도 안 든 태그</b><br><span class="refs">${orphan.map(tc).join("")}</span></p>` : ""}
+    <div class="acts"><button class="btn" type="button" data-sheet-close>닫기</button></div>`);
+}
+const bulkIds = () => sortIds(tab).filter(id => matches(tab, id));
+function renderBulk(){
+  const n = bulkIds().length;
+  const fs = folderOrder();
+  sheet(`<h3>${COLS[tab]} ${n}개를 폴더에 담기</h3>
+    <p>지금 검색 결과(<span class="mono">${esc(q)}</span>) 전부를 폴더에 넣어. 이미 들어 있는 건 건너뛰어.</p>
+    <div class="lint">${fs.map(x => `<button type="button" class="use" data-act="bulkgo" data-f="${esc(x.id)}"><span class="sp" style="padding-left:${x.depth * 14}px">▸ ${esc(S.folders[x.id].name||x.id)}</span><span class="c">${L(S.folders[x.id].items).length}</span></button>`).join("") || `<p class="hint">폴더가 없어. 아래에 이름을 쳐서 새로 만들어.</p>`}</div>
+    <div class="adder"><input id="bulkName" placeholder="새 폴더 이름" autocomplete="off"><button type="button" class="btn primary" data-act="bulkgo">새 폴더에 담기</button></div>
+    <div class="acts"><button class="btn" type="button" data-sheet-close>닫기</button></div>`);
 }
 
 /* ---------- 내보내기 / 가져오기 ---------- */
@@ -838,14 +1238,16 @@ function exportFiles(){
   const f = {};
   for(const id of Object.keys(S.cards).sort()){
     const c = S.cards[id], ups = c.upgrades || [];
-    f[`cards/${id}/default.json`] = J({id, name:c.name||"", kind:c.kind||"reward", tags:c.tags||[], cost:c.cost||{}, effect:c.effect||"", note:c.note||"", upgrades:ups.map(u => u.key)});
+    f[`cards/${id}/default.json`] = J({id, name:c.name||"", kind:c.kind||"reward", tags:c.tags||[], cost:c.cost||{}, effect:c.effect||"", note:c.note||"", memo:c.memo||[], upgrades:ups.map(u => u.key)});
     for(const u of ups) f[`cards/${id}/${u.key}.json`] = J({id:`${id}_${u.key}`, name:u.name||"", from:u.from||"default", tags:u.tags||[], cost:u.cost||{}, effect:u.effect||"", materials:u.materials||[], note:u.note||""});
   }
   const arr = c => Object.keys(S[c]).sort().map(id => ({id, ...S[c][id]}));
+  const tagsOut = () => Object.keys(S.tags).sort().map(id => ({id, ...S.tags[id], tags:selfTags(id, S.tags[id].tags)}));
   f["materials.json"] = J(arr("materials"));
   f["enemies.json"] = J(arr("enemies"));
-  f["tags.json"] = J(arr("tags"));
-  f["data.json"] = J({version:1, cards:arr("cards"), materials:arr("materials"), enemies:arr("enemies"), tags:arr("tags")});
+  f["tags.json"] = J(tagsOut());
+  f["folders.json"] = J(arr("folders"));
+  f["data.json"] = J({version:1, cards:arr("cards"), materials:arr("materials"), enemies:arr("enemies"), tags:tagsOut(), folders:arr("folders")});
   return f;
 }
 function sheet(html){ $("#sheetHost").innerHTML = `<div class="sheet" data-close><div class="card" role="dialog" aria-modal="true">${html}</div></div>`; }
@@ -854,7 +1256,7 @@ document.addEventListener("click", e => { if(e.target.matches(".sheet[data-close
 $("#btnExport").addEventListener("click", () => {
   const n = Object.keys(S.cards).length;
   sheet(`<h3>내보내기</h3>
-    <p>카드 ${n}장을 <span class="mono">cards/&lt;id&gt;/default.json</span>과 강화별 <span class="mono">red.json</span> 같은 파일로 나눠서 zip 하나로 묶어. 재료·적·태그는 각각 json 하나, 전체 백업은 <span class="mono">data.json</span>.</p>
+    <p>카드 ${n}장을 <span class="mono">cards/&lt;id&gt;/default.json</span>과 강화별 <span class="mono">red.json</span> 같은 파일로 나눠서 zip 하나로 묶어. 재료·적·태그·폴더는 각각 json 하나, 전체 백업은 <span class="mono">data.json</span>.</p>
     <div class="acts">
       <button class="btn primary" type="button" id="doZip">zip 저장</button>
       <button class="btn" type="button" id="doCopy">전체 JSON 복사</button>
@@ -904,7 +1306,7 @@ $("#btnImport").addEventListener("click", () => {
   sheet(`<h3>가져오기</h3>
     <p>파일(zip · json · txt)을 고르거나, JSON 글을 아래 칸에 붙여 넣어. 같은 id는 덮어쓰고 나머지는 그대로 둬.</p>
     <div class="acts"><button class="btn primary" type="button" id="pick">파일 고르기</button></div>
-    <textarea id="imText" placeholder='{"cards": [...], "materials": [...], "enemies": [...], "tags": [...]}  또는 카드 하나 {"id": "...", ...}'></textarea>
+    <textarea id="imText" placeholder='{"cards": [...], "materials": [...], "enemies": [...], "tags": [...], "folders": [...]}  또는 카드 하나 {"id": "...", ...}'></textarea>
     <div class="acts"><button class="btn primary" type="button" id="imPaste">붙여 넣은 JSON 가져오기</button>
       <button class="btn" type="button" data-sheet-close>닫기</button></div>
     <p id="imMsg"></p>`);
@@ -928,10 +1330,10 @@ function importAny(o){
   if(Array.isArray(o)) o = { cards: o };
   // id가 있으면 한 항목 (카드에도 tags 배열이 있어서 목록 여부로는 못 가른다)
   if(o && typeof o === "object" && typeof o.id === "string"){
-    const c = o.drops || o.pattern !== undefined ? "enemies" : o.effect !== undefined || o.upgrades ? "cards" : o.color ? "tags" : "materials";
+    const c = Array.isArray(o.items) ? "folders" : o.drops || o.pattern !== undefined ? "enemies" : o.effect !== undefined || o.upgrades ? "cards" : o.color ? "tags" : "materials";
     o = { [c]: [o] };
   } else if(!o || typeof o !== "object" || !Object.keys(COLS).some(c => Array.isArray(o[c])))
-    throw new Error("cards·materials·enemies·tags 목록이나 id가 있는 항목이 아니다");
+    throw new Error("cards·materials·enemies·tags·folders 목록이나 id가 있는 항목이 아니다");
   return importBackup(o);
 }
 function afterImport(n){
@@ -949,16 +1351,23 @@ $("#fileIn").addEventListener("change", async e => {
       if(!window.JSZip) throw new Error("zip 라이브러리 없음");
       const zip = await JSZip.loadAsync(file);
       const files = {};
-      for(const p in zip.files) if(!zip.files[p].dir && p.endsWith(".json")) files[p.replace(/^.*?(cards\/|materials\.json|enemies\.json|tags\.json|data\.json)/, "$1")] = JSON.parse(await zip.files[p].async("string"));
+      for(const p in zip.files) if(!zip.files[p].dir && p.endsWith(".json")) files[p.replace(/^.*?(cards\/|materials\.json|enemies\.json|tags\.json|folders\.json|data\.json)/, "$1")] = JSON.parse(await zip.files[p].async("string"));
       n = files["data.json"] ? importBackup(files["data.json"]) : importFolders(files);
     } else n = importText(await file.text()); // .json · .txt · 확장자 없는 파일도 글로 읽는다
     afterImport(n);
   }catch(err){ if(msg) msg.textContent = "못 읽었어: " + err.message; }
 });
 function strip(o){ const r = clone(o); delete r.id; return r; }
+// 가져온 항목 다듬기: 태그는 자기 자신 포함, 폴더 항목은 {c,id}만
+function fixItem(c, id, d){
+  if(c === "tags") d.tags = selfTags(id, d.tags);
+  if(c === "folders"){ d.items = L(d.items).filter(x => x && ITEMC.includes(x.c) && typeof x.id === "string").map(x => ({c:x.c, id:x.id})); d.parent = d.parent || ""; d.note = d.note || ""; }
+  if(d.memo !== undefined) d.memo = L(d.memo).map(String);
+  return d;
+}
 function importBackup(o){
   let n = 0;
-  for(const c in COLS){ for(const it of o[c] || []){ if(it && it.id && ID_RE.test(it.id)){ put(c, it.id, strip(it)); n++; } } }
+  for(const c in COLS){ for(const it of o[c] || []){ if(it && it.id && ID_RE.test(it.id)){ put(c, it.id, fixItem(c, it.id, strip(it))); n++; } } }
   return n;
 }
 function importFolders(files){
@@ -972,11 +1381,11 @@ function importFolders(files){
     if(!ID_RE.test(cid)) continue;
     const b = cards[cid].base || {}, ups = cards[cid].ups;
     const order = (b.upgrades || []).filter(k => ups[k]).concat(Object.keys(ups).filter(k => !(b.upgrades||[]).includes(k)));
-    put("cards", cid, {name:b.name||cid, kind:b.kind||"reward", cost:b.cost||{}, effect:b.effect||"", tags:b.tags||[], note:b.note||"",
+    put("cards", cid, {name:b.name||cid, kind:b.kind||"reward", cost:b.cost||{}, effect:b.effect||"", tags:b.tags||[], note:b.note||"", memo:b.memo||[],
       upgrades:order.map(k => { const u = ups[k]; return {key:k, name:u.name||k, from:u.from||"default", cost:u.cost||{}, effect:u.effect||"", tags:u.tags||[], materials:u.materials||[], note:u.note||""}; })});
     n++;
   }
-  for(const c of ["materials","enemies","tags"]) for(const it of files[c+".json"] || []) if(it && it.id && ID_RE.test(it.id)){ put(c, it.id, strip(it)); n++; }
+  for(const c of ["materials","enemies","tags","folders"]) for(const it of files[c+".json"] || []) if(it && it.id && ID_RE.test(it.id)){ put(c, it.id, fixItem(c, it.id, strip(it))); n++; }
   return n;
 }
 
