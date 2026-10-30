@@ -5,6 +5,9 @@ on:
   # main에 올리면 바로 배포한다
   push:
     branches: ["main"]
+    # 공방 화면(index.html)이 바뀔 때만 배포한다
+    paths:
+      - "index.html"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
