@@ -141,6 +141,12 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr)}
 .f input.bad{border-color:var(--warn)}
 .hint{font-size:12px;color:var(--muted)}
 .hint.warn{color:var(--warn)}
+.costopt{display:flex;align-items:flex-end;gap:8px;margin-bottom:6px}
+.costopt .costs{flex:1}
+.costopt .no{font-size:11px;color:var(--muted);padding-bottom:9px}
+.popt{display:inline-flex;gap:3px;flex-wrap:wrap}
+.sl{color:var(--muted);margin:0 4px}
+.pip.none{background:var(--muted)}
 .costs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .cost{display:flex;flex-direction:column;gap:2px}
 .cost span{font-size:11px;font-weight:600}
@@ -261,9 +267,19 @@ const ROOT = "workshop";
 let user = null, rdb = null, auth = null, listeners = [], loaded = {};
 const pending = new Map(); let qtimer = null;
 const arr = v => Array.isArray(v) ? v.filter(x => x != null) : (v && typeof v === "object" ? Object.values(v) : []);
+// 비용: costs = [{energy, mana, hp, gold}, …] — 한 줄이 비용의 한 경우다. 여러 줄이면 그 카드는 경우마다 따로 한 장씩 나온다
+//   (예: [2/0/0/0], [0/2/0/0], [1/1/0/0] → 기력 2짜리 · 마나 2짜리 · 기력 1+마나 1짜리). 줄이 없으면 비용 없음.
+// 옛 형식 cost {energy:1, mana:1}은 자원마다 한 경우로 쪼갠다 (기력 1짜리 · 마나 1짜리).
+const splitCost = cost => COST.filter(([k]) => cost && +cost[k] > 0).map(([k]) => ({[k]: +cost[k]}));
+function fixCosts(x){
+  const own = x.costs != null ? (Array.isArray(x.costs) ? x.costs : Object.values(x.costs || {})) : splitCost(x.cost);
+  x.costs = own.filter(c => c && typeof c === "object").map(c => { const o = {}; for(const [k] of COST) if(+c[k] > 0) o[k] = +c[k]; return o; });
+  delete x.cost;
+  return x;
+}
 function norm(c, d){
   d = clone(d); d.memo = arr(d.memo);
-  if(c === "cards"){ d.cost = d.cost || {}; d.tags = arr(d.tags); d.upgrades = arr(d.upgrades).map(u => ({...u, cost:u.cost||{}, tags:arr(u.tags), materials:arr(u.materials)})); }
+  if(c === "cards"){ fixCosts(d); d.tags = arr(d.tags); d.upgrades = arr(d.upgrades).map(u => fixCosts({...u, tags:arr(u.tags), materials:arr(u.materials)})); }
   if(c === "enemies"){ d.tags = arr(d.tags); d.drops = arr(d.drops); }
   if(c === "equipment"){ d.tags = arr(d.tags); }
   if(c === "tags"){ d.tags = arr(d.tags); }
@@ -313,7 +329,9 @@ function tagChip(tid, removable, path){
   if(!t) return `<span class="chip missing" title="없는 태그">${esc(tid)}${removable?`<button data-act="rmref" data-path="${path}" data-v="${esc(tid)}" aria-label="빼기">×</button>`:""}</span>`;
   return `<span class="chip" style="color:var(--t-${t.color||"slate"})">${esc(t.name||tid)}${removable?`<button data-act="rmref" data-path="${path}" data-v="${esc(tid)}" aria-label="빼기">×</button>`:""}</span>`;
 }
-function pips(cost){ return COST.filter(([k]) => cost && cost[k]).map(([k,l]) => `<span class="pip ${k}">${l} ${cost[k]}</span>`).join(""); }
+function pips1(cost){ return COST.filter(([k]) => cost && cost[k]).map(([k,l]) => `<span class="pip ${k}">${l} ${cost[k]}</span>`).join("") || `<span class="pip none">없음</span>`; }
+// 비용의 경우들: 줄마다 묶어 "/"로 잇는다
+function pips(costs){ const l = L(costs); return l.length ? l.map(c => `<span class="popt">${pips1(c)}</span>`).join(`<span class="sl">/</span>`) : ""; }
 function vcolor(key){ return VARIANTS.some(v => v[0] === key) ? `var(--v-${key})` : "var(--accent)"; }
 function matUses(mid){
   const out = [];
@@ -522,7 +540,8 @@ function costMatch(cost, specs){
   }
   return true;
 }
-const costList = d => [d.cost || {}, ...L(d.upgrades).map(u => u.cost || {})];
+const optsOf = x => L(x.costs).length ? x.costs : [{}];
+const costList = d => [...optsOf(d), ...L(d.upgrades).flatMap(optsOf)];
 function test(c, id, d, t){
   const v = (t.val || "").toLowerCase();
   if(t.key === "tag"){ const ids = tagIdsFor(t.val); const have = expandTags(tagIdsOf(c, id, d)); return ids.some(x => have.has(x)); }
@@ -556,7 +575,7 @@ function rowMeta(c, id){
   const d = S[c][id];
   if(c === "cards"){
     const ups = d.upgrades || [];
-    return `${pips(d.cost)}${(d.tags||[]).map(t => tagChip(t)).join("")}${ups.length ? `<span>강화 ${ups.map(u => `<b style="color:${vcolor(u.key)}">●</b>`).join("")}</span>` : ""}${extraMeta(c, id, d)}`;
+    return `${pips(d.costs)}${(d.tags||[]).map(t => tagChip(t)).join("")}${ups.length ? `<span>강화 ${ups.map(u => `<b style="color:${vcolor(u.key)}">●</b>`).join("")}</span>` : ""}${extraMeta(c, id, d)}`;
   }
   if(c === "materials"){ const u = matUses(id).length, dr = matDrops(id).length; return `<span>카드 ${u}곳</span><span>· 드랍 ${dr}종</span>${d.source?`<span>· ${esc(d.source)}</span>`:""}${extraMeta(c, id, d)}`; }
   if(c === "equipment") return `<span>${esc(label(SLOTS, d.slot) || "부위 없음")}</span><span>· ${esc(label(RARITIES, d.rarity) || "-")}</span>${d.price ? `<span class="mono">· ${d.price}G</span>` : ""}${(d.tags||[]).map(t => tagChip(t)).join("")}${extraMeta(c, id, d)}`;
@@ -639,8 +658,12 @@ function commit(){
   put(sel.c, sel.id, clone(draft));
 }
 
-function costRow(path, cost){
-  return `<div class="costs">${COST.map(([k,l]) => `<label class="cost ${k}"><span>${l}</span><input type="number" inputmode="numeric" min="0" id="${path}-${k}" data-f="${path}.${k}" data-num value="${cost && cost[k] ? cost[k] : ""}" placeholder="0"></label>`).join("")}</div>`;
+// 비용 경우 목록 편집: 줄마다 기력/마나/체력/골드. 줄을 더하면 그 카드는 경우마다 따로 한 장씩 나온다
+function costsBlock(path, costs){
+  const list = L(costs);
+  return `${list.map((cost, i) => `<div class="costopt"><span class="no mono">${i + 1}</span><div class="costs">${COST.map(([k,l]) => `<label class="cost ${k}"><span>${l}</span><input type="number" inputmode="numeric" min="0" id="${path}-${i}-${k}" data-f="${path}.${i}.${k}" data-num value="${cost && cost[k] ? cost[k] : ""}" placeholder="0"></label>`).join("")}</div>
+      <button type="button" class="x" data-act="rmrow" data-path="${path}" data-i="${i}" aria-label="이 경우 빼기">×</button></div>`).join("") || `<p class="hint">비용 없음</p>`}
+    <div class="adder"><button type="button" class="btn" data-act="addcost" data-path="${path}">+ 비용 경우 추가</button>${list.length > 1 ? `<span class="hint">${list.length}가지 비용이 각각 따로 한 장씩 나와</span>` : ""}</div>`;
 }
 function tagField(path, tags, opts = {}){
   const selfId = opts.self;
@@ -891,7 +914,7 @@ function cardEditor(d){
       <div class="f"><label for="ed-name">이름</label><input id="ed-name" data-f="name" value="${esc(d.name)}"></div>
       ${idField()}
       <div class="f"><label for="ed-kind">분류</label><select id="ed-kind" data-f="kind">${KINDS.map(([k,l]) => `<option value="${k}" ${d.kind===k?"selected":""}>${l}</option>`).join("")}</select></div>
-      <div class="f wide"><span class="lab">비용</span>${costRow("cost", d.cost)}</div>
+      <div class="f wide"><span class="lab">비용</span>${costsBlock("costs", d.costs)}</div>
       <div class="f wide"><label for="ed-fx">효과</label><textarea id="ed-fx" data-f="effect">${esc(d.effect)}</textarea></div>
       ${tagField("tags", d.tags)}
       <div class="f wide"><label for="ed-note">비고</label><textarea id="ed-note" data-f="note">${esc(d.note)}</textarea></div>
@@ -918,7 +941,7 @@ function upgradeBlock(u, i, d, keysTaken){
   const custom = !VARIANTS.some(([k]) => k === u.key);
   const froms = ["default", ...(d.upgrades||[]).map(x => x.key).filter(k => k !== u.key)];
   return `<details class="up" id="up-${esc(u.key)}" style="--vc:${vcolor(u.key)}" open>
-    <summary><span>${esc(u.name || u.key)}</span><span class="k">${esc(u.key)}.json</span><span class="sp"></span>${pips(u.cost)}</summary>
+    <summary><span>${esc(u.name || u.key)}</span><span class="k">${esc(u.key)}.json</span><span class="sp"></span>${pips(u.costs)}</summary>
     <div class="body"><div class="grid">
       <div class="f"><label for="${p}-name">이름</label><input id="${p}-name" data-f="${p}.name" value="${esc(u.name)}"></div>
       <div class="f"><label for="${p}-key">파일 이름</label><select id="${p}-key" data-act="rekey" data-i="${i}">
@@ -926,7 +949,7 @@ function upgradeBlock(u, i, d, keysTaken){
         ${custom ? `<option value="${esc(u.key)}" selected>${esc(u.key)}</option>` : ""}</select></div>
       <div class="f"><label for="${p}-from">강화 전</label><select id="${p}-from" data-f="${p}.from">
         ${froms.map(k => `<option value="${esc(k)}" ${(u.from||"default")===k?"selected":""}>${k==="default" ? "기본 ("+esc(d.name||sel.id)+")" : esc(((d.upgrades||[]).find(x=>x.key===k)||{}).name || k)}</option>`).join("")}</select></div>
-      <div class="f wide"><span class="lab">비용</span>${costRow(p+".cost", u.cost)}</div>
+      <div class="f wide"><span class="lab">비용</span>${costsBlock(p+".costs", u.costs)}</div>
       <div class="f wide"><label for="${p}-fx">효과</label><textarea id="${p}-fx" data-f="${p}.effect">${esc(u.effect)}</textarea></div>
       <div class="f wide"><span class="lab">재료 · 수량</span>${matRows(p+".materials", u.materials)}</div>
       ${tagField(p+".tags", u.tags)}
@@ -1143,7 +1166,7 @@ document.addEventListener("click", e => {
   if(act === "findfolder"){ tab = "cards"; q = `folder:"${b.dataset.v}"`; renderTabs(); closeEditor(); return; }
   if(act === "new"){
     const id = newId(tab);
-    const base = {cards:{name:"새 카드", kind:"reward", cost:{energy:1}, effect:"", tags:[], note:"", upgrades:[]},
+    const base = {cards:{name:"새 카드", kind:"reward", costs:[{energy:1}], effect:"", tags:[], note:"", upgrades:[]},
       equipment:{name:"새 장비", slot:"", rarity:"common", price:0, source:"", effect:"", tags:[], note:""},
       materials:{name:"새 재료", source:"", note:""},
       enemies:{name:"새 적", hp:10, atk:2, floors:"", tags:[], drops:[], pattern:"", note:""},
@@ -1166,12 +1189,13 @@ document.addEventListener("click", e => {
   if(act === "rmref"){ const arr = getPath(draft, b.dataset.path) || []; setPath(draft, b.dataset.path, arr.filter(x => x !== b.dataset.v)); commit(); renderEditor(); renderList(); return; }
   if(act === "rmrow"){ const arr = getPath(draft, b.dataset.path) || []; arr.splice(+b.dataset.i, 1); commit(); renderEditor(); renderList(); return; }
   if(act === "color"){ draft.color = b.dataset.v; commit(); renderEditor(); renderList(); return; }
+  if(act === "addcost"){ const arr = getPath(draft, b.dataset.path) || []; arr.push({}); setPath(draft, b.dataset.path, arr); commit(); renderEditor(); renderList(); return; }
   if(act === "addup"){
     draft.upgrades = draft.upgrades || [];
     const taken = draft.upgrades.map(u => u.key);
     let key = (VARIANTS.find(([k]) => !taken.includes(k)) || [])[0];
     if(!key){ let n = 1; while(taken.includes("v"+n)) n++; key = "v"+n; }
-    draft.upgrades.push({key, name:upgradeName(draft.name||"", key), from:"default", cost:clone(draft.cost), effect:draft.effect||"", tags:[...(draft.tags||[])], materials:[], note:""});
+    draft.upgrades.push({key, name:upgradeName(draft.name||"", key), from:"default", costs:clone(L(draft.costs)), effect:draft.effect||"", tags:[...(draft.tags||[])], materials:[], note:""});
     commit(); renderEditor(); renderList();
     setTimeout(() => { const el = $("#up-"+key); if(el) el.scrollIntoView({block:"start", behavior:"smooth"}); }, 30);
     return;
@@ -1180,7 +1204,7 @@ document.addEventListener("click", e => {
       const u = draft.upgrades[+b.dataset.i];
       for(const x of draft.upgrades) if(x.from === u.key) x.from = u.from || "default";
       draft.upgrades.splice(+b.dataset.i, 1); commit(); renderEditor(); renderList(); }); return; }
-  if(act === "copyup"){ const u = draft.upgrades[+b.dataset.i]; u.cost = clone(draft.cost); u.effect = draft.effect || ""; commit(); renderEditor(); return; }
+  if(act === "copyup"){ const u = draft.upgrades[+b.dataset.i]; u.costs = clone(L(draft.costs)); u.effect = draft.effect || ""; commit(); renderEditor(); return; }
   if(act === "jump"){ const el = $("#up-"+CSS.escape(b.dataset.k)); if(el){ el.open = true; el.scrollIntoView({block:"start", behavior:"smooth"}); } return; }
 });
 let listTimer = null;
@@ -1190,7 +1214,7 @@ document.addEventListener("input", e => {
   if(t.dataset.add){ showSugg(t); return; }
   if(!sel || !t.dataset.f || t.tagName === "SELECT") return;
   let v = t.value;
-  if("num" in t.dataset){ v = v === "" ? undefined : Number(v); if(t.dataset.f.includes("cost.") && !v) v = undefined; }
+  if("num" in t.dataset){ v = v === "" ? undefined : Number(v); if(/(^|\.)costs\.\d+\./.test(t.dataset.f) && !v) v = undefined; }
   setPath(draft, t.dataset.f, v);
   commit();
   if(t.dataset.f === "name"){ const h = $(".ed-head h2"); if(h) h.textContent = draft.name || sel.id; }
@@ -1273,6 +1297,7 @@ function renderHelp(){
     <h4>분류·있음/없음</h4>
     <p>${ex('kind:보상')} ${ex('kind:기본')} ${ex('has:강화')} ${ex('no:재료')} ${ex('has:메모')} ${ex('no:폴더')}</p>
     <h4>비용 (카드)</h4>
+    <p class="hint">비용은 ‘경우’ 목록이야. 한 줄 = 한 가지 비용(기력 1 + 마나 1처럼 같이 낼 수도 있어). 줄이 여러 개면 경우마다 따로 한 장씩 나온다. 아래 검색은 어느 경우든 맞으면 찾아.</p>
     <p>${ex('cost:기력')} ${ex('cost:3')} ${ex('cost:기력 cost:3')} ${ex('cost:마나>=2')} ${ex('cost:없음')}</p>
     <p class="hint">종류만 쓰면 그 자원이 든 카드, 숫자만 쓰면 어느 자원이든 그 값. 종류와 숫자를 같이 쓰면 "그 자원이 그 값"으로 묶어서 봐. <span class="mono">&gt;= &lt;= &gt; &lt; =</span> 가능, 강화 카드의 비용도 같이 봐.</p>
     <h4>메모 태그 · 폴더</h4>
@@ -1319,8 +1344,8 @@ function exportFiles(){
   const f = {};
   for(const id of Object.keys(S.cards).sort()){
     const c = S.cards[id], ups = c.upgrades || [];
-    f[`cards/${id}/default.json`] = J({id, name:c.name||"", kind:c.kind||"reward", tags:c.tags||[], cost:c.cost||{}, effect:c.effect||"", note:c.note||"", memo:c.memo||[], upgrades:ups.map(u => u.key)});
-    for(const u of ups) f[`cards/${id}/${u.key}.json`] = J({id:`${id}_${u.key}`, name:u.name||"", from:u.from||"default", tags:u.tags||[], cost:u.cost||{}, effect:u.effect||"", materials:u.materials||[], note:u.note||""});
+    f[`cards/${id}/default.json`] = J({id, name:c.name||"", kind:c.kind||"reward", tags:c.tags||[], costs:c.costs||[], effect:c.effect||"", note:c.note||"", memo:c.memo||[], upgrades:ups.map(u => u.key)});
+    for(const u of ups) f[`cards/${id}/${u.key}.json`] = J({id:`${id}_${u.key}`, name:u.name||"", from:u.from||"default", tags:u.tags||[], costs:u.costs||[], effect:u.effect||"", materials:u.materials||[], note:u.note||""});
   }
   const arr = c => Object.keys(S[c]).sort().map(id => ({id, ...S[c][id]}));
   const tagsOut = () => Object.keys(S.tags).sort().map(id => ({id, ...S.tags[id], tags:selfTags(id, S.tags[id].tags)}));
@@ -1442,6 +1467,7 @@ $("#fileIn").addEventListener("change", async e => {
 function strip(o){ const r = clone(o); delete r.id; return r; }
 // 가져온 항목 다듬기: 태그는 자기 자신 포함, 폴더 항목은 {c,id}만
 function fixItem(c, id, d){
+  if(c === "cards"){ fixCosts(d); for(const u of L(d.upgrades)) fixCosts(u); }
   if(c === "tags") d.tags = selfTags(id, d.tags);
   if(c === "folders"){ d.items = L(d.items).filter(x => x && ITEMC.includes(x.c) && typeof x.id === "string").map(x => ({c:x.c, id:x.id})); d.parent = d.parent || ""; d.note = d.note || ""; }
   if(d.memo !== undefined) d.memo = L(d.memo).map(String);
@@ -1463,8 +1489,8 @@ function importFolders(files){
     if(!ID_RE.test(cid)) continue;
     const b = cards[cid].base || {}, ups = cards[cid].ups;
     const order = (b.upgrades || []).filter(k => ups[k]).concat(Object.keys(ups).filter(k => !(b.upgrades||[]).includes(k)));
-    put("cards", cid, {name:b.name||cid, kind:b.kind||"reward", cost:b.cost||{}, effect:b.effect||"", tags:b.tags||[], note:b.note||"", memo:b.memo||[],
-      upgrades:order.map(k => { const u = ups[k]; return {key:k, name:u.name||k, from:u.from||"default", cost:u.cost||{}, effect:u.effect||"", tags:u.tags||[], materials:u.materials||[], note:u.note||""}; })});
+    put("cards", cid, {name:b.name||cid, kind:b.kind||"reward", costs:fixCosts({costs:b.costs, cost:b.cost}).costs, effect:b.effect||"", tags:b.tags||[], note:b.note||"", memo:b.memo||[],
+      upgrades:order.map(k => { const u = ups[k]; return {key:k, name:u.name||k, from:u.from||"default", costs:fixCosts({costs:u.costs, cost:u.cost}).costs, effect:u.effect||"", tags:u.tags||[], materials:u.materials||[], note:u.note||""}; })});
     n++;
   }
   for(const c of ["equipment","materials","enemies","tags","folders"]) for(const it of files[c+".json"] || []) if(it && it.id && ID_RE.test(it.id)){ put(c, it.id, fixItem(c, it.id, strip(it))); n++; }
