@@ -223,16 +223,19 @@ section.blk>h3 .sp{flex:1}
 
 <script>
 "use strict";
-const COLS = {cards:"카드", materials:"재료", enemies:"적", tags:"태그", folders:"폴더"};
-const PREFIX = {cards:"card", materials:"mat", enemies:"enemy", tags:"tag", folders:"folder"};
-const ITEMC = ["cards", "enemies", "materials", "tags"]; // 폴더에 담을 수 있는 것들
+const COLS = {cards:"카드", equipment:"장비", materials:"재료", enemies:"적", tags:"태그", folders:"폴더"};
+const PREFIX = {cards:"card", equipment:"equip", materials:"mat", enemies:"enemy", tags:"tag", folders:"folder"};
+const ITEMC = ["cards", "equipment", "enemies", "materials", "tags"]; // 폴더에 담을 수 있는 것들
 const COST = [["energy","기력"],["mana","마나"],["hp","체력"],["gold","골드"]];
 const KINDS = [["basic","기본"],["reward","보상"],["special","특수"]];
+// 장비: 슬레이 더 스파이어의 유물처럼 가지고만 있어도 되는 게 아니라, 소지품 패에서 장착해야 효과가 있다
+const SLOTS = [["hand","손"],["head","머리"],["body","몸"],["waist","허리"],["back","등"],["trinket","장신구"]];
+const RARITIES = [["common","흔함"],["uncommon","드묾"],["rare","희귀"],["boss","우두머리"]];
 const VARIANTS = [["red","빨강","붉은"],["blue","파랑","푸른"],["yellow","노랑","노란"],["green","초록","초록"],["purple","보라","보랏빛"]];
 const TAGCOLORS = ["slate","gray","red","rose","orange","amber","olive","lime","green","teal","sky","blue","indigo","violet","pink","brown"];
 const ID_RE = /^[a-z0-9_]+$/;
 
-const S = {cards:{}, materials:{}, enemies:{}, tags:{}, folders:{}};
+const S = {cards:{}, equipment:{}, materials:{}, enemies:{}, tags:{}, folders:{}};
 let tab = "cards", sel = null, q = "", tagFilter = null, draft = null, themeOpen = {};
 let panels = {}; try{ panels = JSON.parse(localStorage.getItem("ws-panels") || "{}") || {}; }catch(e){}
 const savePanels = () => { try{ localStorage.setItem("ws-panels", JSON.stringify(panels)); }catch(e){} };
@@ -262,6 +265,7 @@ function norm(c, d){
   d = clone(d); d.memo = arr(d.memo);
   if(c === "cards"){ d.cost = d.cost || {}; d.tags = arr(d.tags); d.upgrades = arr(d.upgrades).map(u => ({...u, cost:u.cost||{}, tags:arr(u.tags), materials:arr(u.materials)})); }
   if(c === "enemies"){ d.tags = arr(d.tags); d.drops = arr(d.drops); }
+  if(c === "equipment"){ d.tags = arr(d.tags); }
   if(c === "tags"){ d.tags = arr(d.tags); }
   if(c === "folders"){ d.items = arr(d.items); d.parent = d.parent || ""; }
   return d;
@@ -325,6 +329,7 @@ function tagUses(tid){
   const out = [];
   for(const cid of sortIds("cards")){ const c = S.cards[cid]; if((c.tags||[]).includes(tid)) out.push({c:"cards", id:cid, label:c.name||cid});
     for(const u of c.upgrades || []) if((u.tags||[]).includes(tid)) out.push({c:"cards", id:cid, label:(u.name||u.key) + " (" + (c.name||cid) + " 강화)"}); }
+  for(const eid of sortIds("equipment")) if((S.equipment[eid].tags||[]).includes(tid)) out.push({c:"equipment", id:eid, label:S.equipment[eid].name||eid});
   for(const eid of sortIds("enemies")) if((S.enemies[eid].tags||[]).includes(tid)) out.push({c:"enemies", id:eid, label:S.enemies[eid].name||eid});
   return out;
 }
@@ -346,7 +351,7 @@ const members = tid => Object.keys(S.tags).filter(id => id !== tid && attached(i
 const themes = () => Object.keys(S.tags).filter(id => members(id).length);                           // 구성원이 있는 태그
 function tagIdsOf(c, id, d){
   if(c === "cards") return allTags(d);
-  if(c === "enemies") return L(d.tags);
+  if(c === "enemies" || c === "equipment") return L(d.tags);
   if(c === "tags") return [id, ...attached(id)];
   return [];
 }
@@ -361,7 +366,7 @@ function relatedTo(tid){
     for(const t of tagClosure(id)) if(t !== id && mine.has(t)) shared++;
     if(shared) bump(id, "theme", shared);
   }
-  for(const c of ["cards", "enemies"]) for(const id in S[c]){
+  for(const c of ["cards", "equipment", "enemies"]) for(const id in S[c]){
     const d = S[c][id];
     const groups = c === "cards" ? [L(d.tags), ...L(d.upgrades).map(u => L(u.tags))] : [L(d.tags)];
     for(const g of groups) if(g.includes(tid)) for(const o of g) bump(o, "co");
@@ -523,6 +528,8 @@ function test(c, id, d, t){
   if(t.key === "tag"){ const ids = tagIdsFor(t.val); const have = expandTags(tagIdsOf(c, id, d)); return ids.some(x => have.has(x)); }
   if(t.key === "kind"){ const k = KINDS.find(([a,b]) => a === v || b === t.val); return !!k && d.kind === k[0]; }
   if(t.key === "cost"){ const s = c === "cards" ? parseCost(t.val) : null; return !!s && costList(d).some(cost => costMatch(cost, [s])); }
+  if(t.key === "slot") return c === "equipment" && (d.slot === v || label(SLOTS, d.slot) === t.val);
+  if(t.key === "rarity") return c === "equipment" && (d.rarity === v || label(RARITIES, d.rarity) === t.val);
   if(t.key === "memo") return L(d.memo).some(m => m.toLowerCase() === v);
   if(t.key === "folder") return inFolder(c, id, t.val);
   if(t.key === "has" || t.key === "no"){
@@ -544,6 +551,7 @@ function matches(c, id){
   if(specs.length && (c !== "cards" || !costList(d).some(cost => costMatch(cost, specs)))) return false;
   return toks.filter(t => !(t.key === "cost" && !t.neg && parseCost(t.val))).every(t => test(c, id, d, t) !== t.neg);
 }
+const label = (list, k) => (list.find(x => x[0] === k) || [])[1] || "";
 function rowMeta(c, id){
   const d = S[c][id];
   if(c === "cards"){
@@ -551,6 +559,7 @@ function rowMeta(c, id){
     return `${pips(d.cost)}${(d.tags||[]).map(t => tagChip(t)).join("")}${ups.length ? `<span>강화 ${ups.map(u => `<b style="color:${vcolor(u.key)}">●</b>`).join("")}</span>` : ""}${extraMeta(c, id, d)}`;
   }
   if(c === "materials"){ const u = matUses(id).length, dr = matDrops(id).length; return `<span>카드 ${u}곳</span><span>· 드랍 ${dr}종</span>${d.source?`<span>· ${esc(d.source)}</span>`:""}${extraMeta(c, id, d)}`; }
+  if(c === "equipment") return `<span>${esc(label(SLOTS, d.slot) || "부위 없음")}</span><span>· ${esc(label(RARITIES, d.rarity) || "-")}</span>${d.price ? `<span class="mono">· ${d.price}G</span>` : ""}${(d.tags||[]).map(t => tagChip(t)).join("")}${extraMeta(c, id, d)}`;
   if(c === "enemies") return `<span class="mono">HP ${d.hp ?? "-"} · ATK ${d.atk ?? "-"}</span>${d.floors?`<span>· ${esc(d.floors)}층</span>`:""}${(d.tags||[]).map(t => tagChip(t)).join("")}${extraMeta(c, id, d)}`;
   if(c === "tags"){
     const mem = members(id).length;
@@ -611,6 +620,7 @@ function renderList(){
 }
 function emptyText(c){
   return {cards:"아직 카드가 없어. ‘+ 새 카드’로 만들거나, 가져오기로 zip·json을 불러와.",
+    equipment:"장비가 없어. 소지품 패에서 장착해야 효과가 나는 유물 같은 장비를 여기서 만들어.",
     materials:"재료가 없어. 여기서 만들어두면 카드 강화와 적 드랍에서 골라 쓸 수 있어. 카드 편집기에서 이름을 바로 쳐도 새로 만들어져.",
     enemies:"적이 없어. 적을 만들고 드랍 재료를 붙이면, 재료 쪽에 어디서 나오는지 자동으로 보여.",
     tags:"태그가 없어. 카드나 적 편집기의 태그 칸에 이름을 치면 바로 생겨.",
@@ -800,6 +810,15 @@ function lint(){
     }
     for(const t of d.tags||[]) if(!S.tags[t]) add("cards", id, "없음", `${d.name||id}: 없는 태그 ${t}`);
   }
+  for(const id of sortIds("equipment")){
+    const d = S.equipment[id];
+    (d.tags||[]).forEach(t => usedTags.add(t));
+    if(!(d.effect||"").trim()) add("equipment", id, "효과", `${d.name||id}: 효과가 비었다`);
+    if(!d.slot) add("equipment", id, "없음", `${d.name||id}: 장착 부위가 없다`);
+    if(!(d.tags||[]).length) add("equipment", id, "태그", `${d.name||id}: 태그가 없다`);
+    const r = recTags(d.effect, d.tags); if(r.length) add("equipment", id, "추천", `${d.name||id}: 추천 태그 ${r.map(t => S.tags[t].name).join(", ")}`);
+    for(const t of d.tags||[]) if(!S.tags[t]) add("equipment", id, "없음", `${d.name||id}: 없는 태그 ${t}`);
+  }
   for(const id of sortIds("enemies")){
     const d = S.enemies[id];
     (d.tags||[]).forEach(t => usedTags.add(t));
@@ -841,6 +860,7 @@ function renderEditor(resetScroll){
   const c = sel.c, d = draft;
   let h = head();
   if(c === "cards") h += cardEditor(d);
+  if(c === "equipment") h += equipmentEditor(d);
   if(c === "materials") h += materialEditor(d);
   if(c === "enemies") h += enemyEditor(d);
   if(c === "tags") h += tagEditor(d);
@@ -916,6 +936,22 @@ function upgradeBlock(u, i, d, keysTaken){
       <button type="button" class="btn" data-act="copyup" data-i="${i}">기본 비용·효과 복사</button>
       <button type="button" class="btn danger" data-act="rmup" data-i="${i}">이 강화 삭제</button></div>
     </div></details>`;
+}
+function equipmentEditor(d){
+  const opts = (list, cur) => `<option value="">(없음)</option>` + list.map(([k,l]) => `<option value="${k}" ${cur===k?"selected":""}>${l}</option>`).join("");
+  return `<div class="grid">
+      <div class="f"><label for="ed-name">이름</label><input id="ed-name" data-f="name" value="${esc(d.name)}"></div>
+      ${idField()}
+      <div class="f"><label for="ed-slot">장착 부위</label><select id="ed-slot" data-f="slot">${opts(SLOTS, d.slot)}</select></div>
+      <div class="f"><label for="ed-rar">희귀도</label><select id="ed-rar" data-f="rarity">${opts(RARITIES, d.rarity)}</select></div>
+      <div class="f"><label for="ed-price">값 (G)</label><input id="ed-price" type="number" inputmode="numeric" min="0" data-f="price" data-num value="${d.price ?? ""}" placeholder="0"></div>
+      <div class="f"><label for="ed-src">얻는 곳 (메모)</label><input id="ed-src" data-f="source" value="${esc(d.source)}" placeholder="상점, 보물 상자, 우두머리 보상…"></div>
+      <div class="f wide"><label for="ed-fx">효과</label><textarea id="ed-fx" data-f="effect" placeholder="예) 옆칸 대상에게 입히는 피해 +20%&#10;예) 턴 시작시 마나 2 회복">${esc(d.effect)}</textarea>
+        <span class="hint">소지품 패에서 장착한 동안에만 적용돼.</span></div>
+      ${tagField("tags", d.tags)}
+      <div class="f wide"><label for="ed-note">비고</label><textarea id="ed-note" data-f="note">${esc(d.note)}</textarea></div>
+      ${metaFields(d)}
+    </div>`;
 }
 function materialEditor(d){
   const uses = matUses(sel.id), drops = matDrops(sel.id);
@@ -1027,6 +1063,7 @@ function renameRefs(c, a, b){
       const f = arr => (arr||[]).map(t => { if(t === a){ ch = true; return b; } return t; });
       d.tags = f(d.tags); for(const u of d.upgrades || []) u.tags = f(u.tags); if(ch) touch("cards", id); }
     for(const id in S.tags){ const d = S.tags[id]; if(L(d.tags).includes(a)){ d.tags = d.tags.map(t => t === a ? b : t); touch("tags", id); } }
+    for(const id in S.equipment){ const d = S.equipment[id]; if((d.tags||[]).includes(a)){ d.tags = d.tags.map(t => t===a ? b : t); touch("equipment", id); } }
     for(const id in S.enemies){ const d = S.enemies[id]; if((d.tags||[]).includes(a)){ d.tags = d.tags.map(t => t===a ? b : t); touch("enemies", id); } }
   }
   if(ITEMC.includes(c)) for(const f in S.folders){ const d = S.folders[f]; let ch = false;
@@ -1107,6 +1144,7 @@ document.addEventListener("click", e => {
   if(act === "new"){
     const id = newId(tab);
     const base = {cards:{name:"새 카드", kind:"reward", cost:{energy:1}, effect:"", tags:[], note:"", upgrades:[]},
+      equipment:{name:"새 장비", slot:"", rarity:"common", price:0, source:"", effect:"", tags:[], note:""},
       materials:{name:"새 재료", source:"", note:""},
       enemies:{name:"새 적", hp:10, atk:2, floors:"", tags:[], drops:[], pattern:"", note:""},
       tags:{name:"새 태그", color:"slate", note:"", tags:[id]},
@@ -1230,6 +1268,8 @@ function renderHelp(){
     <h4>태그</h4>
     <p>${ex('tag:공격')} ${ex('tag:"테마 A"')} ${ex('-tag:이동')} ${ex('no:태그')}</p>
     <p class="hint">강화 카드의 태그도 보고, 태그에 달린 상위 태그(테마)까지 따라가. <span class="mono">tag:"테마 A"</span>는 그 테마의 구성원이 붙은 카드도 찾아줘. 앞에 <span class="mono">-</span>를 붙이면 빼기.</p>
+    <h4>장비</h4>
+    <p>${ex("slot:손")} ${ex("rarity:희귀")} ${ex("tag:마나")}</p>
     <h4>분류·있음/없음</h4>
     <p>${ex('kind:보상')} ${ex('kind:기본')} ${ex('has:강화')} ${ex('no:재료')} ${ex('has:메모')} ${ex('no:폴더')}</p>
     <h4>비용 (카드)</h4>
@@ -1284,11 +1324,12 @@ function exportFiles(){
   }
   const arr = c => Object.keys(S[c]).sort().map(id => ({id, ...S[c][id]}));
   const tagsOut = () => Object.keys(S.tags).sort().map(id => ({id, ...S.tags[id], tags:selfTags(id, S.tags[id].tags)}));
+  f["equipment.json"] = J(arr("equipment"));
   f["materials.json"] = J(arr("materials"));
   f["enemies.json"] = J(arr("enemies"));
   f["tags.json"] = J(tagsOut());
   f["folders.json"] = J(arr("folders"));
-  f["data.json"] = J({version:1, cards:arr("cards"), materials:arr("materials"), enemies:arr("enemies"), tags:tagsOut(), folders:arr("folders")});
+  f["data.json"] = J({version:1, cards:arr("cards"), equipment:arr("equipment"), materials:arr("materials"), enemies:arr("enemies"), tags:tagsOut(), folders:arr("folders")});
   return f;
 }
 function sheet(html){ $("#sheetHost").innerHTML = `<div class="sheet" data-close><div class="card" role="dialog" aria-modal="true">${html}</div></div>`; }
@@ -1347,7 +1388,7 @@ $("#btnImport").addEventListener("click", () => {
   sheet(`<h3>가져오기</h3>
     <p>파일(zip · json · txt)을 고르거나, JSON 글을 아래 칸에 붙여 넣어. 같은 id는 덮어쓰고 나머지는 그대로 둬.</p>
     <div class="acts"><button class="btn primary" type="button" id="pick">파일 고르기</button></div>
-    <textarea id="imText" placeholder='{"cards": [...], "materials": [...], "enemies": [...], "tags": [...], "folders": [...]}  또는 카드 하나 {"id": "...", ...}'></textarea>
+    <textarea id="imText" placeholder='{"cards": [...], "equipment": [...], "materials": [...], "enemies": [...], "tags": [...], "folders": [...]}  또는 카드 하나 {"id": "...", ...}'></textarea>
     <div class="acts"><button class="btn primary" type="button" id="imPaste">붙여 넣은 JSON 가져오기</button>
       <button class="btn" type="button" data-sheet-close>닫기</button></div>
     <p id="imMsg"></p>`);
@@ -1371,10 +1412,10 @@ function importAny(o){
   if(Array.isArray(o)) o = { cards: o };
   // id가 있으면 한 항목 (카드에도 tags 배열이 있어서 목록 여부로는 못 가른다)
   if(o && typeof o === "object" && typeof o.id === "string"){
-    const c = Array.isArray(o.items) ? "folders" : o.drops || o.pattern !== undefined ? "enemies" : o.effect !== undefined || o.upgrades ? "cards" : o.color ? "tags" : "materials";
+    const c = Array.isArray(o.items) ? "folders" : o.drops || o.pattern !== undefined ? "enemies" : o.slot !== undefined || o.rarity !== undefined ? "equipment" : o.effect !== undefined || o.upgrades ? "cards" : o.color ? "tags" : "materials";
     o = { [c]: [o] };
   } else if(!o || typeof o !== "object" || !Object.keys(COLS).some(c => Array.isArray(o[c])))
-    throw new Error("cards·materials·enemies·tags·folders 목록이나 id가 있는 항목이 아니다");
+    throw new Error("cards·equipment·materials·enemies·tags·folders 목록이나 id가 있는 항목이 아니다");
   return importBackup(o);
 }
 function afterImport(n){
@@ -1392,7 +1433,7 @@ $("#fileIn").addEventListener("change", async e => {
       if(!window.JSZip) throw new Error("zip 라이브러리 없음");
       const zip = await JSZip.loadAsync(file);
       const files = {};
-      for(const p in zip.files) if(!zip.files[p].dir && p.endsWith(".json")) files[p.replace(/^.*?(cards\/|materials\.json|enemies\.json|tags\.json|folders\.json|data\.json)/, "$1")] = JSON.parse(await zip.files[p].async("string"));
+      for(const p in zip.files) if(!zip.files[p].dir && p.endsWith(".json")) files[p.replace(/^.*?(cards\/|equipment\.json|materials\.json|enemies\.json|tags\.json|folders\.json|data\.json)/, "$1")] = JSON.parse(await zip.files[p].async("string"));
       n = files["data.json"] ? importBackup(files["data.json"]) : importFolders(files);
     } else n = importText(await file.text()); // .json · .txt · 확장자 없는 파일도 글로 읽는다
     afterImport(n);
@@ -1426,7 +1467,7 @@ function importFolders(files){
       upgrades:order.map(k => { const u = ups[k]; return {key:k, name:u.name||k, from:u.from||"default", cost:u.cost||{}, effect:u.effect||"", tags:u.tags||[], materials:u.materials||[], note:u.note||""}; })});
     n++;
   }
-  for(const c of ["materials","enemies","tags","folders"]) for(const it of files[c+".json"] || []) if(it && it.id && ID_RE.test(it.id)){ put(c, it.id, fixItem(c, it.id, strip(it))); n++; }
+  for(const c of ["equipment","materials","enemies","tags","folders"]) for(const it of files[c+".json"] || []) if(it && it.id && ID_RE.test(it.id)){ put(c, it.id, fixItem(c, it.id, strip(it))); n++; }
   return n;
 }
 
