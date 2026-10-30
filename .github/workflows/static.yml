@@ -2,9 +2,9 @@
 name: Deploy static content to Pages
 
 on:
-  # main이나 개발 브랜치에 올리면 바로 배포한다
+  # main에 올리면 바로 배포한다
   push:
-    branches: ["main", "claude/kuntogame-kortfinite-review-zkzey9"]
+    branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
